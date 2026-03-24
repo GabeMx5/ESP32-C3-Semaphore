@@ -523,6 +523,21 @@ void setupWebServer()
         request->send(200, "text/plain", "pong");
     });
 
+    static String cmdBody;
+    webServer.on("/cmd", HTTP_POST,
+        [](AsyncWebServerRequest *request) {
+            JsonDocument doc;
+            if (deserializeJson(doc, cmdBody)) { request->send(400, "text/plain", "invalid json"); return; }
+            processCommand(doc);
+            request->send(200, "text/plain", "ok");
+        },
+        nullptr,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            if (index == 0) cmdBody = "";
+            cmdBody += String((char*)data).substring(0, len);
+        }
+    );
+
     webServer.on("/backup", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
         auto readFile = [&](const char* path, const char* key) {
