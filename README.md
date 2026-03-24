@@ -1,138 +1,138 @@
 # ESP32-C3 Semaphore
 
-Un semaforo RGB smart basato su **Seeed XIAO ESP32-C3**, controllabile via browser con interfaccia web PWA, integrazione MQTT/Home Assistant e timer schedulati.
+A smart RGB traffic light based on the **Seeed XIAO ESP32-C3**, controllable via browser with a PWA web interface, MQTT/Home Assistant integration, and scheduled timers.
 
 ---
 
 ## Hardware
 
-| Componente | Dettaglio |
+| Component | Detail |
 |---|---|
 | MCU | Seeed XIAO ESP32-C3 (RISC-V) |
-| LED | 3× WS2812B (NeoPixel) su GPIO 10 |
+| LED | 3× WS2812B (NeoPixel) on GPIO 10 |
 | Display | OLED SSD1306 128×64 I²C (SDA GPIO 5, SCL GPIO 6) |
-| Storage | LittleFS su flash interna |
+| Storage | LittleFS on internal flash |
 
-I tre LED sono disposti verticalmente: **top = LED 2**, **middle = LED 1**, **bottom = LED 0**.
+The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **bottom = LED 0**.
 
 ---
 
-## Funzionalità
+## Features
 
-### Controllo LED
-- Colore RGB individuale per ciascun LED
-- Stato ON / OFF / BLINK (lampeggio 500 ms)
-- Salvataggio automatico della configurazione su flash con debounce 10 s
+### LED Control
+- Individual RGB color per LED
+- ON / OFF / BLINK state (500 ms blink interval)
+- Automatic configuration save to flash with 10 s debounce
 
-### Effetti (FX)
+### Effects (FX)
 
-| Effetto | Descrizione |
+| Effect | Description |
 |---|---|
-| **Cycle** | Attiva i LED in sequenza top→middle→bottom con durate configurabili |
-| **Party** | Flash casuali su tutti i LED con intensità "madness" regolabile (1–10) |
-| **Rainbow** | Scorrimento continuo dello spettro HSV con tempo di ciclo configurabile |
-| **Random Yes/No** | Il LED centrale lampeggia ad accelerazione crescente e rivela verde (sì) o rosso (no) |
-| **Guess** | Gioco: l'utente sceglie un LED, parte un'animazione 24 step 500 ms→50 ms, poi il firmware rivela il LED vincente |
+| **Cycle** | Activates LEDs sequentially top→middle→bottom with configurable durations |
+| **Party** | Random flashing on all LEDs with adjustable "madness" intensity (1–10) |
+| **Rainbow** | Continuous HSV spectrum scroll with configurable cycle time |
+| **Random Yes/No** | Middle LED blinks with increasing speed and reveals green (yes) or red (no) |
+| **Guess** | Game: the user picks a LED, a 24-step 500 ms→50 ms animation runs, then the firmware reveals the winning LED |
 
-Gli effetti sono mutuamente esclusivi: attivarne uno disabilita automaticamente gli altri.
+Effects are mutually exclusive: enabling one automatically disables the others.
 
-### Timer
-- Fino a 50 timer con scheduling settimanale (lunedì–domenica)
-- Azioni disponibili: `all_off`, `led0/1/2` (con colore RGB), `cycle`, `party`, `rainbow`
-- **Durata opzionale** in secondi: allo scadere, l'effetto viene disattivato automaticamente (0 = nessun limite)
-- Esecuzione basata su RTC via NTP
+### Timers
+- Up to 50 timers with weekly scheduling (Monday–Sunday)
+- Available actions: `all_off`, `led0/1/2` (with RGB color), `cycle`, `party`, `rainbow`
+- **Optional duration** in seconds: when elapsed, the effect is automatically stopped (0 = no limit)
+- Execution based on RTC via NTP
 
-### Connettività
-- **WiFi** STA con DHCP o IP statico; fallback in modalità AP (`192.168.4.1`) dopo 3 tentativi falliti
-- **mDNS** con hostname configurabile (default `semaphore.local`)
-- **WebSocket** real-time con ping/pong applicativo (3 s intervallo, 2 s timeout)
-- **OTA** (ArduinoOTA) per aggiornamenti firmware senza cavi
-- **MQTT** opzionale con supporto Home Assistant auto-discovery
+### Connectivity
+- **WiFi** STA with DHCP or static IP; fallback to AP mode (`192.168.4.1`) after 3 failed attempts
+- **mDNS** with configurable hostname (default `semaphore.local`)
+- **WebSocket** real-time with application-level ping/pong (3 s interval, 2 s timeout)
+- **OTA** (ArduinoOTA) for wireless firmware updates
+- **MQTT** optional with Home Assistant auto-discovery support
 
-### Display OLED
-- Mostra messaggi di stato al boot e feedback delle operazioni
-- Sleep automatico dopo 10 s di inattività
+### OLED Display
+- Shows status messages at boot and operation feedback
+- Auto-sleep after 10 s of inactivity
 
 ---
 
-## Interfaccia Web (PWA)
+## Web Interface (PWA)
 
-Accessibile da browser all'indirizzo `http://<ip>` o `http://semaphore.local`. Funziona come Progressive Web App installabile su iOS e Android.
+Accessible from a browser at `http://<ip>` or `http://semaphore.local`. Works as a Progressive Web App installable on iOS and Android.
 
-### Tab LED
+### LED Tab
 ![LED](screenshots/LED.png)
 
-Controllo diretto dei tre LED con color picker, toggle ON/OFF e BLINK. Rappresentazione SVG del semaforo aggiornata in tempo reale.
+Direct control of the three LEDs with color picker, ON/OFF and BLINK toggles. Real-time SVG representation of the traffic light.
 
-### Tab FX
+### FX Tab
 ![FX](screenshots/FX.png)
 
-Attivazione degli effetti con parametri configurabili:
-- Tempi per fase del Cycle
-- Livello di madness del Party
-- Tempo di ciclo del Rainbow
-- Pulsante **Random Yes/No** con animazione dado
-- Pulsante **Guess** con selezione LED, animazione rotante durante il gioco e card WINNER/LOOSER con icone dedicate
+Enable effects with configurable parameters:
+- Cycle phase durations
+- Party madness level
+- Rainbow cycle time
+- **Random Yes/No** button with dice animation
+- **Guess** button with LED selection, spinning animation during the game, and WINNER/LOOSER card with dedicated icons
 
-### Tab TIMER
+### TIMER Tab
 ![TIMER](screenshots/TIMER.png)
 
-Aggiunta, modifica e cancellazione di timer con selezione giorni, orario (HH:MM:SS), azione e durata in secondi (0 = nessun limite). Salvataggio persistente su device.
+Add, edit and delete timers with day selection, time (HH:MM:SS), action and duration in seconds (0 = no limit). Persistent save to device.
 
-### Tab WIFI
+### WIFI Tab
 ![WIFI](screenshots/WIFI.png)
 
-Configurazione di nome dispositivo, server NTP, timezone, credenziali WiFi e IP statico. Il salvataggio riavvia il dispositivo.
+Configure device name, NTP server, timezone, WiFi credentials and static IP. Saving restarts the device.
 
-### Tab MQTT
+### MQTT Tab
 ![MQTT](screenshots/MQTT.png)
 
-Configurazione broker, porta, credenziali, client ID e topic prefix. Stato connessione in tempo reale.
+Configure broker, port, credentials, client ID and topic prefix. Real-time connection status.
 
-### Tab INFO
+### INFO Tab
 ![INFO](screenshots/INFO.png)
 
-Diagnostica: IP, SSID, RSSI, heap libero, uptime, stato MQTT, MAC address, frequenza CPU, chip model, canale WiFi. Include il toggle **Make changes persistent**: se disabilitato, le modifiche a LED ed effetti non vengono scritte su flash (utile per configurazioni temporanee).
+System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel. Includes the **Make changes persistent** toggle: when disabled, LED and effect changes are not written to flash (useful for temporary configurations).
 
 ---
 
-## Connettività MQTT / Home Assistant
+## MQTT / Home Assistant
 
-Il dispositivo pubblica automaticamente i topic di discovery per Home Assistant:
-- **Luci**: stato e controllo colore/luminosità per ciascun LED
-- **Switch**: cycle, party, rainbow
+The device automatically publishes discovery topics for Home Assistant:
+- **Lights**: state and color/brightness control for each LED
+- **Switches**: cycle, party, rainbow
 
-Topic di comando: `{topicPrefix}/cmd` (formato JSON, stesso protocollo WebSocket).
+Command topic: `{topicPrefix}/cmd` (JSON format, same protocol as WebSocket).
 
 ---
 
-## Persistenza dati
+## Data Persistence
 
-| File | Contenuto |
+| File | Content |
 |---|---|
-| `/config.json` | Colori, stati e parametri effetti LED |
-| `/wifi.json` | Credenziali WiFi e configurazione IP |
-| `/mqtt.json` | Configurazione broker MQTT |
-| `/timers.json` | Definizione timer |
+| `/config.json` | LED colors, states and effect parameters |
+| `/wifi.json` | WiFi credentials and IP configuration |
+| `/mqtt.json` | MQTT broker configuration |
+| `/timers.json` | Timer definitions |
 
 ---
 
 ## Build & Flash
 
-Il progetto usa **PlatformIO**.
+The project uses **PlatformIO**.
 
 ```bash
-# Build e flash via USB
+# Build and flash via USB
 pio run --target upload
 
 # Upload filesystem (web UI)
 pio run --target uploadfs
 
-# OTA (dopo primo flash)
-# Abilitare upload_protocol = espota in platformio.ini
+# OTA (after first flash)
+# Enable upload_protocol = espota in platformio.ini
 ```
 
-### Librerie principali
+### Main Libraries
 
 - `Adafruit NeoPixel`
 - `ESPAsyncWebServer` + `AsyncTCP`
@@ -142,18 +142,18 @@ pio run --target uploadfs
 
 ---
 
-## Struttura del progetto
+## Project Structure
 
 ```
 ├── src/
 │   ├── main.cpp              # Entry point, WebSocket, MQTT, HTTP routing
-│   ├── ledController.h       # Effetti LED e giochi
-│   ├── timerController.h     # Scheduler settimanale
-│   ├── mqttController.h      # Client MQTT + HA discovery
+│   ├── ledController.h       # LED effects and games
+│   ├── timerController.h     # Weekly scheduler
+│   ├── mqttController.h      # MQTT client + HA discovery
 │   ├── networkManager.h      # WiFi STA/AP fallback
 │   ├── configController.h    # Load/save config.json, dirty flag
-│   ├── wifiConfigManager.h   # Persistenza configurazione rete
-│   └── monitorController.h   # Display OLED
+│   ├── wifiConfigManager.h   # Network configuration persistence
+│   └── monitorController.h   # OLED display
 └── data/                     # Web UI (LittleFS)
     ├── index.html
     ├── index.js
