@@ -151,10 +151,10 @@ let blinkPhase = false;
 setInterval(() => {
   blinkPhase = !blinkPhase;
   ledStatus.forEach((led, index) => {
-    if (!led.blink || !led.on) return;
+    if (!led.blink) return;
     const ledCircle = document.querySelector(`#svgContainer svg #led${index}`);
     if (!ledCircle) return;
-    ledCircle.style.fill = blinkPhase ? `rgb(${led.r},${led.g},${led.b})` : "#444";
+    ledCircle.style.fill = (led.on && blinkPhase) ? `rgb(${led.r},${led.g},${led.b})` : "#444";
   });
 }, BLINK_INTERVAL_MS);
 
@@ -183,6 +183,8 @@ function onLedStatus(leds) {
     }
     if (ledCircle && !isBlink) {
       ledCircle.style.fill = isOn ? `rgb(${led.r},${led.g},${led.b})` : "#444";
+    } else if (ledCircle && !isOn) {
+      ledCircle.style.fill = "#444";
     }
   });
 }
@@ -207,7 +209,8 @@ function prepareLedCards() {
     function sendLed(r, g, b, on, blink) {
       Object.assign(ledStatus[ledIndex], { r, g, b, on, blink });
       wsSend({ type: "setLed", led: ledIndex, r, g, b, on, blink });
-      if (!blink) ledCircle.style.fill = on ? `rgb(${r},${g},${b})` : "#444";
+      if (!on) ledCircle.style.fill = "#444";
+      else if (!blink) ledCircle.style.fill = `rgb(${r},${g},${b})`;
     }
 
     function currentRGB() {
@@ -524,17 +527,48 @@ function backupConfig() {
   a.click();
 }
 
+let _restoreFileContent = null;
+
 function restoreConfig(input) {
   const file = input.files[0];
   if (!file) return;
+  input.value = "";
   const reader = new FileReader();
   reader.onload = (e) => {
-    fetch("/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: e.target.result })
-      .then(r => r.ok ? alert("Restore completed. The device is rebooting...") : alert("Restore failed."))
-      .catch(() => alert("Restore failed."));
+    _restoreFileContent = e.target.result;
+    showRestorePhase("confirm");
+    document.getElementById("restore-overlay").classList.add("visible");
   };
   reader.readAsText(file);
-  input.value = "";
+}
+
+function showRestorePhase(phase) {
+  ["confirm", "progress", "result"].forEach(p =>
+    document.getElementById("restore-phase-" + p).style.display = p === phase ? "" : "none"
+  );
+}
+
+function closeRestoreOverlay() {
+  document.getElementById("restore-overlay").classList.remove("visible");
+  _restoreFileContent = null;
+}
+
+function confirmRestore() {
+  if (!_restoreFileContent) return;
+  showRestorePhase("progress");
+  fetch("/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: _restoreFileContent })
+    .then(r => {
+      if (!r.ok) throw new Error();
+      document.getElementById("restoreResultText").textContent = "Restore completed. Rebooting...";
+      showRestorePhase("result");
+      fetch("/restart", { method: "POST" }).catch(() => {});
+      setTimeout(closeRestoreOverlay, 2000);
+    })
+    .catch(() => {
+      document.getElementById("restoreResultText").textContent = "Restore failed.";
+      showRestorePhase("result");
+      setTimeout(closeRestoreOverlay, 2000);
+    });
 }
 
 document.getElementById("makeChangesPersistent").addEventListener("change", (e) => {

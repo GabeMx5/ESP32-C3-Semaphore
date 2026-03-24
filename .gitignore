@@ -7,3 +7,5 @@
 # Sensitive config files (use *.example.json as template)
 data/wifi.json
 data/mqtt.json
+data/config.json
+data/timers.json

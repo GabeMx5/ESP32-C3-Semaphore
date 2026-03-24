@@ -22,6 +22,24 @@
     <span class="disconnected-title">Device lost</span>
     <span class="disconnected-sub" id="reconnectMsg">Reconnecting...</span>
   </div>
+  <div id="restore-overlay">
+    <div class="morse-card">
+      <div id="restore-phase-confirm">
+        <p class="guess-heading">Restore backup?</p>
+        <p class="restore-sub">The device will reboot after restore.</p>
+        <div class="morse-actions">
+          <button class="morse-cancel-btn" onclick="closeRestoreOverlay()">Cancel</button>
+          <button class="action-btn" onclick="confirmRestore()">Restore</button>
+        </div>
+      </div>
+      <div id="restore-phase-progress" style="display:none">
+        <p class="guess-heading">Restoring...</p>
+      </div>
+      <div id="restore-phase-result" style="display:none">
+        <p id="restoreResultText" class="guess-heading"></p>
+      </div>
+    </div>
+  </div>
   <div id="morse-overlay">
     <div class="morse-card">
       <p class="guess-heading">Morse Code</p>

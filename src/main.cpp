@@ -536,6 +536,7 @@ void setupWebServer()
         readFile("/config.json", "config");
         readFile("/wifi.json",   "wifi");
         readFile("/mqtt.json",   "mqtt");
+        readFile("/timers.json", "timers");
         String out;
         serializeJsonPretty(doc, out);
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", out);
@@ -543,34 +544,37 @@ void setupWebServer()
         request->send(resp);
     });
 
+    static String restoreBody;
     webServer.on("/restore", HTTP_POST,
         [](AsyncWebServerRequest *request) {
-            request->send(200, "text/plain", "ok");
+            JsonDocument doc;
+            if (deserializeJson(doc, restoreBody)) { request->send(400, "text/plain", "invalid json"); return; }
+            auto writeFile = [&](const char* path, const char* key) {
+                if (doc[key].isNull()) return;
+                File f = LittleFS.open(path, "w");
+                if (!f) return;
+                serializeJsonPretty(doc[key], f);
+                f.close();
+            };
+            writeFile("/config.json", "config");
+            writeFile("/wifi.json",   "wifi");
+            writeFile("/mqtt.json",   "mqtt");
+            writeFile("/timers.json", "timers");
+            Serial.println("[Backup] Restore completed.");
+            request->send(200, "text/plain", "restore completed");
         },
         nullptr,
         [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            static String body;
-            if (index == 0) body = "";
-            body += String((char*)data).substring(0, len);
-            if (index + len == total) {
-                JsonDocument doc;
-                if (deserializeJson(doc, body)) { request->send(400, "text/plain", "invalid json"); return; }
-                auto writeFile = [&](const char* path, const char* key) {
-                    if (doc[key].isNull()) return;
-                    File f = LittleFS.open(path, "w");
-                    if (!f) return;
-                    serializeJsonPretty(doc[key], f);
-                    f.close();
-                };
-                writeFile("/config.json", "config");
-                writeFile("/wifi.json",   "wifi");
-                writeFile("/mqtt.json",   "mqtt");
-                Serial.println("[Backup] Restore completed, rebooting...");
-                delay(200);
-                ESP.restart();
-            }
+            if (index == 0) restoreBody = "";
+            restoreBody += String((char*)data).substring(0, len);
         }
     );
+
+    webServer.on("/restart", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "restarting");
+        delay(200);
+        ESP.restart();
+    });
 
     webServer.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
     webServer.begin();

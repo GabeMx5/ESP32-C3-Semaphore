@@ -26,6 +26,7 @@ private:
     // Blink
     bool          blinkState    = false;
     unsigned long lastBlinkTime = 0;
+    bool          restoreNeeded = false;
 
     // Random Yes/No
     enum class RandomYNState { IDLE, BLINK, RESULT };
@@ -319,7 +320,7 @@ public:
         }
         else
         {
-            restoreAll();
+            restoreNeeded = true;
         }
     }
 
@@ -342,7 +343,7 @@ public:
         }
         else
         {
-            restoreAll();
+            restoreNeeded = true;
         }
     }
 
@@ -362,9 +363,7 @@ public:
         }
         else
         {
-            strip.clear();
-            strip.show();
-            restoreAll();
+            restoreNeeded = true;
         }
     }
 
@@ -465,6 +464,14 @@ public:
 
     void update()
     {
+        if (restoreNeeded)
+        {
+            restoreNeeded = false;
+            strip.clear();
+            strip.show();
+            restoreAll();
+            return;
+        }
         if (guessRunning)
         {
             guessTick();
