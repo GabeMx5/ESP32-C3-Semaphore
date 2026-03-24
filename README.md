@@ -93,7 +93,10 @@ Configure broker, port, credentials, client ID and topic prefix. Real-time conne
 ### INFO Tab
 ![INFO](screenshots/INFO.png)
 
-System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel. Includes the **Make changes persistent** toggle: when disabled, LED and effect changes are not written to flash (useful for temporary configurations).
+System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel. Includes:
+- **Make changes persistent** toggle: when disabled, LED and effect changes are not written to flash (useful for temporary configurations)
+- **Backup** button: downloads a `semaphore-backup.json` file containing `config.json`, `wifi.json` and `mqtt.json`
+- **Restore** button: uploads a backup file and automatically reboots the device to apply changes
 
 ---
 

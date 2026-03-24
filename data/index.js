@@ -517,6 +517,26 @@ function requestInfo() {
   wsSend({ type: "getInfo" });
 }
 
+function backupConfig() {
+  const a = document.createElement("a");
+  a.href = "/backup";
+  a.download = "semaphore-backup.json";
+  a.click();
+}
+
+function restoreConfig(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    fetch("/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: e.target.result })
+      .then(r => r.ok ? alert("Restore completed. The device is rebooting...") : alert("Restore failed."))
+      .catch(() => alert("Restore failed."));
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+
 document.getElementById("makeChangesPersistent").addEventListener("change", (e) => {
   wsSend({ type: "setConfig", makeChangesPersistent: e.target.checked });
 });

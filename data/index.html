@@ -341,6 +341,25 @@
       <div class="info-row"><span class="info-label">CPU Clock</span><span class="info-value" id="infoCpu">—</span></div>
       <div class="info-row"><span class="info-label">Chip</span><span class="info-value" id="infoChip">—</span></div>
       <div class="info-row"><span class="info-label">WiFi channel</span><span class="info-value" id="infoChannel">—</span></div>
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button class="save-btn" style="flex:1;margin:0;" onclick="backupConfig()">
+          <svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Backup
+        </button>
+        <button class="save-btn" style="flex:1;margin:0;" onclick="document.getElementById('restoreInput').click()">
+          <svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Restore
+        </button>
+        <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="restoreConfig(this)">
+      </div>
     </div>
     </div><!-- /.tab-viewport -->
 

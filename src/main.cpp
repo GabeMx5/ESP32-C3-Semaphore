@@ -522,6 +522,56 @@ void setupWebServer()
     webServer.on("/ping", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", "pong");
     });
+
+    webServer.on("/backup", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument doc;
+        auto readFile = [&](const char* path, const char* key) {
+            if (!LittleFS.exists(path)) return;
+            File f = LittleFS.open(path, "r");
+            if (!f) return;
+            JsonDocument tmp;
+            if (!deserializeJson(tmp, f)) doc[key] = tmp;
+            f.close();
+        };
+        readFile("/config.json", "config");
+        readFile("/wifi.json",   "wifi");
+        readFile("/mqtt.json",   "mqtt");
+        String out;
+        serializeJsonPretty(doc, out);
+        AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", out);
+        resp->addHeader("Content-Disposition", "attachment; filename=\"semaphore-backup.json\"");
+        request->send(resp);
+    });
+
+    webServer.on("/restore", HTTP_POST,
+        [](AsyncWebServerRequest *request) {
+            request->send(200, "text/plain", "ok");
+        },
+        nullptr,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            static String body;
+            if (index == 0) body = "";
+            body += String((char*)data).substring(0, len);
+            if (index + len == total) {
+                JsonDocument doc;
+                if (deserializeJson(doc, body)) { request->send(400, "text/plain", "invalid json"); return; }
+                auto writeFile = [&](const char* path, const char* key) {
+                    if (doc[key].isNull()) return;
+                    File f = LittleFS.open(path, "w");
+                    if (!f) return;
+                    serializeJsonPretty(doc[key], f);
+                    f.close();
+                };
+                writeFile("/config.json", "config");
+                writeFile("/wifi.json",   "wifi");
+                writeFile("/mqtt.json",   "mqtt");
+                Serial.println("[Backup] Restore completed, rebooting...");
+                delay(200);
+                ESP.restart();
+            }
+        }
+    );
+
     webServer.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
     webServer.begin();
     monitorController.displayMessage("IP:\n" + WiFi.localIP().toString());
