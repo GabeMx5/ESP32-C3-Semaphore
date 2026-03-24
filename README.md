@@ -60,12 +60,12 @@ Gli effetti sono mutuamente esclusivi: attivarne uno disabilita automaticamente 
 Accessibile da browser all'indirizzo `http://<ip>` o `http://semaphore.local`. Funziona come Progressive Web App installabile su iOS e Android.
 
 ### Tab LED
-![LED](LED.png)
+![LED](screenshots/LED.png)
 
 Controllo diretto dei tre LED con color picker, toggle ON/OFF e BLINK. Rappresentazione SVG del semaforo aggiornata in tempo reale.
 
 ### Tab FX
-![FX](FX.png)
+![FX](screenshots/FX.png)
 
 Attivazione degli effetti con parametri configurabili:
 - Tempi per fase del Cycle
@@ -75,22 +75,22 @@ Attivazione degli effetti con parametri configurabili:
 - Pulsante **Guess** con selezione LED, animazione rotante durante il gioco e card WINNER/LOOSER con icone dedicate
 
 ### Tab TIMER
-![TIMER](TIMER.png)
+![TIMER](screenshots/TIMER.png)
 
 Aggiunta, modifica e cancellazione di timer con selezione giorni, orario (HH:MM:SS), azione e durata in secondi (0 = nessun limite). Salvataggio persistente su device.
 
 ### Tab WIFI
-![WIFI](WIFI.png)
+![WIFI](screenshots/WIFI.png)
 
 Configurazione di nome dispositivo, server NTP, timezone, credenziali WiFi e IP statico. Il salvataggio riavvia il dispositivo.
 
 ### Tab MQTT
-![MQTT](MQTT.png)
+![MQTT](screenshots/MQTT.png)
 
 Configurazione broker, porta, credenziali, client ID e topic prefix. Stato connessione in tempo reale.
 
 ### Tab INFO
-![INFO](INFO.png)
+![INFO](screenshots/INFO.png)
 
 Diagnostica: IP, SSID, RSSI, heap libero, uptime, stato MQTT, MAC address, frequenza CPU, chip model, canale WiFi. Include il toggle **Make changes persistent**: se disabilitato, le modifiche a LED ed effetti non vengono scritte su flash (utile per configurazioni temporanee).
 
