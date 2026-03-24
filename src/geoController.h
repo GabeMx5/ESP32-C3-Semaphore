@@ -41,9 +41,10 @@ public:
 
     void setLocation(float lat, float lon)
     {
-        _lat = lat;
-        _lon = lon;
+        _lat          = lat;
+        _lon          = lon;
         weather.valid = false;
+        _lastFetch    = 0;
     }
 
     void loop()
