@@ -15,7 +15,7 @@ public:
     String timezone   = "CET-1CEST,M3.5.0,M10.5.0/3";
     String wifiSSID;
     String wifiPassword;
-    bool dhcp = true;
+    bool  dhcp      = true;
     IPAddress localIP;
     IPAddress subnet;
     IPAddress gateway;
@@ -86,9 +86,9 @@ public:
         doc["deviceName"] = name;
         doc["ntpServer"]  = ntp;
         doc["timezone"]   = tz;
-        doc["ssid"]     = ssid;
-        doc["password"] = password;
-        doc["dhcp"]     = dhcpMode;
+        doc["ssid"]       = ssid;
+        doc["password"]   = password;
+        doc["dhcp"]       = dhcpMode;
 
         if (!dhcpMode)
         {
@@ -109,11 +109,10 @@ public:
         wifiSSID     = ssid;
         wifiPassword = password;
         dhcp         = dhcpMode;
-
-        localIP = ip;
-        subnet  = subnetMask;
-        gateway = gatewayAddr;
-        dns     = dnsAddr;
+        localIP      = ip;
+        subnet       = subnetMask;
+        gateway      = gatewayAddr;
+        dns          = dnsAddr;
     }
 
     /* =============================

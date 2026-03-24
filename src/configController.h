@@ -29,11 +29,20 @@ public:
         if (_makeChangesPersistent) _dirtyTime = millis();
     }
 
-    bool getMakeChangesPersistent() { return _makeChangesPersistent; }
+    bool  getMakeChangesPersistent() { return _makeChangesPersistent; }
+    float getLatitude()              { return _latitude;  }
+    float getLongitude()             { return _longitude; }
 
     void setMakeChangesPersistent(bool value)
     {
         _makeChangesPersistent = value;
+        save();
+    }
+
+    void setLocation(float lat, float lon)
+    {
+        _latitude  = lat;
+        _longitude = lon;
         save();
     }
 
@@ -60,6 +69,8 @@ public:
         doc["rainbow"]                = _leds->getRainbowEnabled();
         doc["rainbowCycleTime"]       = _leds->getRainbowCycleTime();
         doc["makeChangesPersistent"]  = _makeChangesPersistent;
+        doc["latitude"]               = _latitude;
+        doc["longitude"]              = _longitude;
         File file = LittleFS.open(CONFIG_FILE, "w");
         serializeJsonPretty(doc, file);
         file.close();
@@ -70,6 +81,8 @@ private:
     LEDController   *_leds                  = nullptr;
     unsigned long    _dirtyTime             = 0;
     bool             _makeChangesPersistent = true;
+    float            _latitude              = 0.0f;
+    float            _longitude             = 0.0f;
 
     void load()
     {
@@ -98,6 +111,8 @@ private:
         _leds->setParty(doc["party"] | false, doc["partyMadness"] | 5);
         _leds->setRainbow(doc["rainbow"] | false, doc["rainbowCycleTime"] | 5.0f);
         _makeChangesPersistent = doc["makeChangesPersistent"] | true;
+        _latitude              = doc["latitude"]              | 0.0f;
+        _longitude             = doc["longitude"]             | 0.0f;
         Serial.println("[Config] config.json loaded");
     }
 };

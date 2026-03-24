@@ -122,8 +122,14 @@ function connect() {
       onGuessResult(data);
     } else if (data.type === "configStatus") {
       document.getElementById("makeChangesPersistent").checked = data.makeChangesPersistent;
+      if (data.latitude)  document.getElementById("latitude").value  = data.latitude;
+      if (data.longitude) document.getElementById("longitude").value = data.longitude;
+      updateLocationLabel();
     } else if (data.type === "status") {
-      console.log("Status:", data.status, data.message || "");
+      if (data.reboot) {
+        document.getElementById("wifiSaveText").textContent = "Configuration saved. Rebooting...";
+        setTimeout(closeRestoreOverlay, 2000);
+      }
     }
   });
 
@@ -514,6 +520,18 @@ function onSysInfo(data) {
   document.getElementById("infoCpu").textContent     = data.cpuFreq != null ? `${data.cpuFreq} MHz` : "—";
   document.getElementById("infoChip").textContent    = data.chipModel ? `${data.chipModel} rev${data.chipRevision}` : "—";
   document.getElementById("infoChannel").textContent = data.wifiChannel != null ? `${data.wifiChannel}` : "—";
+  const conditionLabels = ["—", "Clear", "Partly cloudy", "Foggy", "Drizzle", "Rainy", "Snowy", "Stormy"];
+  if (data.weatherCode != null) {
+    const cond = conditionLabels[data.weatherCondition] || "—";
+    document.getElementById("infoWeather").textContent     = `${cond} (code ${data.weatherCode})`;
+    document.getElementById("infoWeatherTemp").textContent = `${data.weatherTemp.toFixed(1)} °C`;
+    document.getElementById("infoWeatherWind").textContent = `${data.weatherWind.toFixed(1)} km/h`;
+  } else {
+    const hasLocation = !!parseFloat(document.getElementById("latitude").value);
+    document.getElementById("infoWeather").textContent     = hasLocation ? "Fetching..." : "No location set";
+    document.getElementById("infoWeatherTemp").textContent = "—";
+    document.getElementById("infoWeatherWind").textContent = "—";
+  }
 }
 
 function requestInfo() {
@@ -543,7 +561,7 @@ function restoreConfig(input) {
 }
 
 function showRestorePhase(phase) {
-  ["confirm", "progress", "result"].forEach(p =>
+  ["confirm", "progress", "result", "wifi"].forEach(p =>
     document.getElementById("restore-phase-" + p).style.display = p === phase ? "" : "none"
   );
 }
@@ -627,29 +645,98 @@ function onWifiConfig(data) {
   if (data.timezone) document.getElementById("timezone").value = data.timezone;
   document.getElementById("ssid").value       = data.ssid       || "";
   document.getElementById("password").value   = data.password   || "";
-  dhcpCheckbox.checked                      = data.dhcp     ?? true;
-  document.getElementById("ip").value       = data.ip       || "";
-  document.getElementById("subnet").value   = data.subnet   || "";
-  document.getElementById("gateway").value  = data.gateway  || "";
-  document.getElementById("dns").value      = data.dns      || "";
+  dhcpCheckbox.checked                        = data.dhcp       ?? true;
+  document.getElementById("ip").value         = data.ip         || "";
+  document.getElementById("subnet").value     = data.subnet     || "";
+  document.getElementById("gateway").value    = data.gateway    || "";
+  document.getElementById("dns").value        = data.dns        || "";
   updateStaticFields();
 }
 
 function saveWifi() {
-  animateSaveIcon("saveWifiIcon");
+  document.getElementById("wifiSaveText").textContent = "";
+  showRestorePhase("wifi");
+  document.getElementById("restore-overlay").classList.add("visible");
   wsSend({
     type:       "setWifi",
     deviceName: document.getElementById("deviceName").value,
     ntpServer:  document.getElementById("ntpServer").value,
     timezone:   document.getElementById("timezone").value,
     ssid:       document.getElementById("ssid").value,
-    password: document.getElementById("password").value,
-    dhcp:     dhcpCheckbox.checked,
-    ip:       document.getElementById("ip").value,
-    subnet:   document.getElementById("subnet").value,
-    gateway:  document.getElementById("gateway").value,
-    dns:      document.getElementById("dns").value,
+    password:   document.getElementById("password").value,
+    dhcp:       dhcpCheckbox.checked,
+    ip:         document.getElementById("ip").value,
+    subnet:     document.getElementById("subnet").value,
+    gateway:    document.getElementById("gateway").value,
+    dns:        document.getElementById("dns").value,
   });
+}
+
+let _map = null;
+let _mapMarker = null;
+let _pendingLat = null;
+let _pendingLon = null;
+
+function openMapOverlay() {
+  document.getElementById("map-overlay").classList.add("visible");
+  _pendingLat = null;
+  _pendingLon = null;
+  document.getElementById("mapConfirmBtn").disabled = true;
+  document.getElementById("mapCoordsDisplay").textContent = "";
+
+  const existingLat = parseFloat(document.getElementById("latitude").value);
+  const existingLon = parseFloat(document.getElementById("longitude").value);
+  const center = (existingLat && existingLon) ? [existingLat, existingLon] : [45, 9];
+  const zoom   = (existingLat && existingLon) ? 12 : 5;
+
+  if (!_map) {
+    _map = L.map("leaflet-map", { zoomControl: true }).setView(center, zoom);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(_map);
+    _map.on("click", (e) => {
+      _pendingLat = +e.latlng.lat.toFixed(6);
+      _pendingLon = +e.latlng.lng.toFixed(6);
+      if (_mapMarker) _mapMarker.setLatLng(e.latlng);
+      else _mapMarker = L.marker(e.latlng).addTo(_map);
+      document.getElementById("mapCoordsDisplay").textContent = `${_pendingLat}, ${_pendingLon}`;
+      document.getElementById("mapConfirmBtn").disabled = false;
+    });
+  } else {
+    _map.setView(center, zoom);
+  }
+
+  if (existingLat && existingLon) {
+    _pendingLat = existingLat;
+    _pendingLon = existingLon;
+    if (_mapMarker) _mapMarker.setLatLng([existingLat, existingLon]);
+    else _mapMarker = L.marker([existingLat, existingLon]).addTo(_map);
+    document.getElementById("mapCoordsDisplay").textContent = `${existingLat}, ${existingLon}`;
+    document.getElementById("mapConfirmBtn").disabled = false;
+  }
+
+  setTimeout(() => _map.invalidateSize(), 120);
+}
+
+function closeMapOverlay() {
+  document.getElementById("map-overlay").classList.remove("visible");
+}
+
+function confirmMapLocation() {
+  if (_pendingLat === null) return;
+  document.getElementById("latitude").value  = _pendingLat;
+  document.getElementById("longitude").value = _pendingLon;
+  updateLocationLabel();
+  wsSend({ type: "setLocation", latitude: _pendingLat, longitude: _pendingLon });
+  closeMapOverlay();
+}
+
+function updateLocationLabel() {
+  const lat = parseFloat(document.getElementById("latitude").value);
+  const lon = parseFloat(document.getElementById("longitude").value);
+  const label = document.getElementById("locationLabel");
+  label.textContent = (lat && lon) ? `lat: ${lat}  lon: ${lon}` : "lat: —  lon: —";
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

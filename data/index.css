@@ -576,6 +576,99 @@ input[type="number"] {
 
 /* ─── Password wrapper ───────────────────────────────────────────────────────*/
 
+.location-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.location-label {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 0px solid var(--border);
+  background: var(--surface);
+  color: var(--secondary-text);
+  font-size: 0.9rem;
+  font-family: monospace;
+  box-sizing: border-box;
+  cursor: default;
+  user-select: none;
+}
+
+.location-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 0;
+  background-color: var(--primary);
+  border: none;
+  border-radius: 10px;
+  color: #0d1117;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.location-btn svg { width: 18px; height: 18px; }
+
+@media (hover: hover) {
+  .location-btn:hover {
+    background-color: rgba(177,255,66,0.15);
+    color: var(--primary);
+  }
+}
+
+#map-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+#map-overlay.visible { display: flex; }
+
+.map-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  box-sizing: border-box;
+}
+
+#leaflet-map {
+  width: 100%;
+  height: 340px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.map-coords-display {
+  font-size: 0.82rem;
+  color: var(--secondary-text);
+  text-align: center;
+  min-height: 1.2em;
+  margin: 0;
+}
+
 .password-wrapper {
   position: relative;
   margin-top: 6px;

@@ -12,6 +12,7 @@
 #include "mqttController.h"
 #include "timerController.h"
 #include "configController.h"
+#include "geoController.h"
 
 AsyncWebServer webServer(80);
 AsyncWebSocket ws("/ws");
@@ -22,6 +23,7 @@ MonitorController monitorController;
 MQTTController mqttController;
 TimerController timerController;
 ConfigController configController;
+GeoController    geoController;
 
 // ─── Broadcast ────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,8 @@ void broadcastConfigStatus()
     JsonDocument doc;
     doc["type"]                  = "configStatus";
     doc["makeChangesPersistent"] = configController.getMakeChangesPersistent();
+    doc["latitude"]              = configController.getLatitude();
+    doc["longitude"]             = configController.getLongitude();
     String msg;
     serializeJson(doc, msg);
     ws.textAll(msg);
@@ -132,7 +136,7 @@ void sendWifiConfig(AsyncWebSocketClient *client)
     doc["timezone"]   = wifiManager.timezone;
     doc["ssid"]       = wifiManager.wifiSSID;
     doc["password"]   = wifiManager.wifiPassword;
-    doc["dhcp"]     = wifiManager.dhcp;
+    doc["dhcp"]       = wifiManager.dhcp;
     if (!wifiManager.dhcp)
     {
         doc["ip"]      = wifiManager.localIP.toString();
@@ -167,6 +171,12 @@ void sendSysInfo(AsyncWebSocketClient *client)
     doc["chipModel"]     = ESP.getChipModel();
     doc["chipRevision"]  = ESP.getChipRevision();
     doc["wifiChannel"]   = WiFi.channel();
+    if (geoController.weather.valid) {
+        doc["weatherCode"]      = geoController.weather.weatherCode;
+        doc["weatherTemp"]      = geoController.weather.temperature;
+        doc["weatherWind"]      = geoController.weather.windSpeed;
+        doc["weatherCondition"] = (int)geoController.weather.condition;
+    }
     String response;
     serializeJson(doc, response);
     client->text(response);
@@ -220,9 +230,9 @@ void processCommand(JsonDocument &doc)
         String newName     = doc["deviceName"] | wifiManager.deviceName.c_str();
         String newNtp      = doc["ntpServer"]  | wifiManager.ntpServer.c_str();
         String newTz       = doc["timezone"]   | wifiManager.timezone.c_str();
-        String newSSID     = doc["ssid"]     | "";
-        String newPassword = doc["password"] | "";
-        bool dhcpMode      = doc["dhcp"]     | true;
+        String newSSID     = doc["ssid"]       | "";
+        String newPassword = doc["password"]   | "";
+        bool   dhcpMode    = doc["dhcp"]       | true;
         String ipStr      = doc["ip"]      | "";
         String subnetStr  = doc["subnet"]  | "";
         String gatewayStr = doc["gateway"] | "";
@@ -312,6 +322,14 @@ void processCommand(JsonDocument &doc)
         configController.setMakeChangesPersistent(doc["makeChangesPersistent"] | true);
         broadcastConfigStatus();
     }
+    else if (strcmp(type, "setLocation") == 0)
+    {
+        float lat = doc["latitude"]  | 0.0f;
+        float lon = doc["longitude"] | 0.0f;
+        configController.setLocation(lat, lon);
+        geoController.setLocation(lat, lon);
+        Serial.printf("[Geo] Location updated: %.6f, %.6f\n", lat, lon);
+    }
     else if (strcmp(type, "getInfo") == 0)
     {
         JsonDocument resp;
@@ -393,9 +411,9 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         String newName     = doc["deviceName"] | wifiManager.deviceName.c_str();
         String newNtp      = doc["ntpServer"]  | wifiManager.ntpServer.c_str();
         String newTz       = doc["timezone"]   | wifiManager.timezone.c_str();
-        String newSSID     = doc["ssid"]     | "";
-        String newPassword = doc["password"] | "";
-        bool dhcpMode      = doc["dhcp"]     | true;
+        String newSSID     = doc["ssid"]       | "";
+        String newPassword = doc["password"]   | "";
+        bool   dhcpMode    = doc["dhcp"]       | true;
         String ipStr      = doc["ip"]      | "";
         String subnetStr  = doc["subnet"]  | "";
         String gatewayStr = doc["gateway"] | "";
@@ -677,6 +695,7 @@ void setup()
         broadcastLedStatus();
     };
     networkManager.begin(wifiManager);
+    geoController.begin(configController.getLatitude(), configController.getLongitude());
     configTzTime(wifiManager.timezone.c_str(), wifiManager.ntpServer.c_str());
     MDNS.begin(wifiManager.deviceName.c_str());
     setupWebServer();
@@ -708,4 +727,5 @@ void loop()
     ws.cleanupClients();
     mqttController.loop();
     configController.loop();
+    geoController.loop();
 }

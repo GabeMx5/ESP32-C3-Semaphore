@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Semaphore</title>
   <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="dm-design-logo.svg">
   <link rel="apple-touch-icon" href="dm-design-logo.png">
@@ -22,6 +24,18 @@
     <span class="disconnected-title">Device lost</span>
     <span class="disconnected-sub" id="reconnectMsg">Reconnecting...</span>
   </div>
+  <div id="map-overlay">
+    <div class="map-card">
+      <p class="guess-heading">Pick location</p>
+      <p class="restore-sub">Tap on the map to place the pin</p>
+      <div id="leaflet-map"></div>
+      <p id="mapCoordsDisplay" class="map-coords-display"></p>
+      <div class="morse-actions">
+        <button class="morse-cancel-btn" onclick="closeMapOverlay()">Cancel</button>
+        <button class="action-btn" id="mapConfirmBtn" disabled onclick="confirmMapLocation()">Confirm</button>
+      </div>
+    </div>
+  </div>
   <div id="restore-overlay">
     <div class="morse-card">
       <div id="restore-phase-confirm">
@@ -37,6 +51,10 @@
       </div>
       <div id="restore-phase-result" style="display:none">
         <p id="restoreResultText" class="guess-heading"></p>
+      </div>
+      <div id="restore-phase-wifi" style="display:none">
+        <p class="guess-heading">Saving...</p>
+        <p id="wifiSaveText" class="restore-sub"></p>
       </div>
     </div>
   </div>
@@ -287,6 +305,9 @@
         <input id="dns" type="text">
       </div>
 
+      <input id="latitude"  type="hidden">
+      <input id="longitude" type="hidden">
+
       <button onclick="saveWifi()" class="save-btn">
         <svg id="saveWifiIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -359,6 +380,21 @@
       <div class="info-row"><span class="info-label">CPU Clock</span><span class="info-value" id="infoCpu">—</span></div>
       <div class="info-row"><span class="info-label">Chip</span><span class="info-value" id="infoChip">—</span></div>
       <div class="info-row"><span class="info-label">WiFi channel</span><span class="info-value" id="infoChannel">—</span></div>
+      <div class="info-row">
+        <span class="info-label">Location</span>
+        <span class="info-value location-row" style="gap:8px;">
+          <span id="locationLabel" class="location-label" style="flex:1;padding:0;background:none;border:none;font-size:inherit;">Not set</span>
+          <button type="button" class="location-btn" style="margin-top:0;width:28px;height:28px;" onclick="openMapOverlay()" title="Pick on map">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </button>
+        </span>
+      </div>
+      <div class="info-row"><span class="info-label">Weather</span><span class="info-value" id="infoWeather">—</span></div>
+      <div class="info-row"><span class="info-label">Temperature</span><span class="info-value" id="infoWeatherTemp">—</span></div>
+      <div class="info-row"><span class="info-label">Wind</span><span class="info-value" id="infoWeatherWind">—</span></div>
       <div style="display:flex;gap:10px;margin-top:20px;">
         <button class="save-btn" style="flex:1;margin:0;" onclick="backupConfig()">
           <svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
