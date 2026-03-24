@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Semaphore</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="dm-design-logo.svg">
+  <link rel="apple-touch-icon" href="dm-design-logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+
+<body>
+  <div id="disconnected-overlay">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="1" y1="1" x2="23" y2="23"/>
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+    </svg>
+    <span class="disconnected-title">Device lost</span>
+    <span class="disconnected-sub" id="reconnectMsg">Reconnecting...</span>
+  </div>
+  <div id="guess-overlay">
+    <div class="guess-card">
+      <div id="guess-phase-pick">
+        <p class="guess-heading">Pick a LED</p>
+        <div class="guess-led-select">
+          <button class="guess-led-opt" data-led="2">Top</button>
+          <button class="guess-led-opt" data-led="1">Middle</button>
+          <button class="guess-led-opt" data-led="0">Bottom</button>
+        </div>
+      </div>
+      <div id="guess-phase-result">
+        <img class="guess-result-icon guess-winner-icon" src="winner.svg" alt="winner">
+        <img class="guess-result-icon guess-loser-icon" src="loser.svg" alt="loser">
+        <p id="guessResultText" class="guess-result-text"></p>
+        <span class="guess-tap-hint">Tap to close</span>
+      </div>
+    </div>
+  </div>
+  <div id="landscape-overlay">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2"/>
+      <circle cx="12" cy="17.5" r="0.75" fill="currentColor" stroke="none"/>
+    </svg>
+    <span>Rotate to portrait</span>
+  </div>
+  <div class="container">
+    <div class="header-logo-wrap">
+      <img src="semaphore-logo.svg" class="header-logo" alt="Semaphore">
+    </div>
+    <div class="tabs">
+      <div class="tab-indicator"></div>
+      <button class="tab-button active" onclick="openTab(event,'led')">LED</button>
+      <button class="tab-button" onclick="openTab(event,'others')">FX</button>
+      <button class="tab-button" onclick="openTab(event,'timer')">TIMER</button>
+      <button class="tab-button" onclick="openTab(event,'wifi')">WIFI</button>
+      <button class="tab-button" onclick="openTab(event,'mqtt')">MQTT</button>
+      <button class="tab-button" onclick="openTab(event,'info')">INFO</button>
+    </div>
+
+    <div class="tab-viewport">
+    <div id="led" class="tab-content active">
+      <div class="led-control">
+        <div id="svgContainer"></div>
+        <!-- LED 2 -->
+        <div class="led-card" data-led="2" style="top: 55px;">
+          <input type="color" class="colorPicker" value="#ff0000">
+          <button class="toggle off">OFF</button>
+          <button class="blink off">BLINK</button>
+        </div>
+
+        <!-- LED 1 -->
+        <div class="led-card" data-led="1" style="top: 145px;">
+          <input type="color" class="colorPicker" value="#ffff00">
+          <button class="toggle off">OFF</button>
+          <button class="blink off">BLINK</button>
+        </div>
+
+        <!-- LED 0 -->
+        <div class="led-card" data-led="0" style="top: 230px;">
+          <input type="color" class="colorPicker" value="#00ff00">
+          <button class="toggle off">OFF</button>
+          <button class="blink off">BLINK</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="others" class="tab-content">
+      <div class="option-row">
+        <span>Cycle</span>
+        <button id="cycleBtn" class="toggle-btn off">OFF</button>
+      </div>
+      <div class="option-row">
+        <label class="time-label">Top Led time (s)</label>
+        <input id="topLedTime" class="time-input" type="number" min="0" step="1" value="5">
+      </div>
+      <div class="option-row">
+        <label class="time-label">Middle Led time (s)</label>
+        <input id="middleLedTime" class="time-input" type="number" min="0" step="1" value="2">
+      </div>
+      <div class="option-row">
+        <label class="time-label">Bottom Led time (s)</label>
+        <input id="bottomLedTime" class="time-input" type="number" min="0" step="1" value="5">
+      </div>
+      <div class="option-row">
+        <span>Party mode</span>
+        <button id="partyBtn" class="toggle-btn off">OFF</button>
+      </div>
+      <div class="option-row">
+        <label class="time-label madness-label">Party madness</label>
+        <input id="partyMadnessVal" class="time-input" type="number" min="1" max="10" value="5">
+      </div>
+      <div class="option-row action-row">
+        <button id="randomYNBtn" class="action-btn">
+          <svg id="diceIcon" class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="3"/>
+            <circle cx="8"  cy="8"  r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="16" cy="8"  r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="8"  cy="16" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="16" cy="16" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+          </svg>
+          Random Yes/No
+        </button>
+      </div>
+      <div class="option-row action-row">
+        <button id="guessBtn" class="action-btn">
+          <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="none"/>
+          </svg>
+          Guess
+        </button>
+      </div>
+      <div class="option-row">
+        <span>Rainbow</span>
+        <button id="rainbowBtn" class="toggle-btn off">OFF</button>
+      </div>
+      <div class="option-row">
+        <label class="time-label">Cycle time (s)</label>
+        <input id="rainbowCycleTime" class="time-input" type="number" min="1" step="1" value="5">
+      </div>
+    </div>
+
+    <div id="timer" class="tab-content">
+      <div id="timerList"></div>
+      <button class="toggle-btn" onclick="addTimer()" style="width:100%;margin-top:4px;">
+        + Add timer
+      </button>
+      <button onclick="saveTimers()" class="save-btn">
+        <svg id="saveTimersIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save Timers
+      </button>
+    </div>
+
+    <div id="wifi" class="tab-content">
+      <label>Device name</label>
+      <input id="deviceName" type="text" placeholder="semaphore">
+
+      <label>NTP Server</label>
+      <input id="ntpServer" type="text" placeholder="pool.ntp.org">
+
+      <label>Time zone</label>
+      <select id="timezone">
+        <optgroup label="UTC">
+          <option value="UTC0">UTC</option>
+        </optgroup>
+        <optgroup label="Europe">
+          <option value="GMT0BST,M3.5.0/1,M10.5.0">London (GMT/BST)</option>
+          <option value="CET-1CEST,M3.5.0,M10.5.0/3">Amsterdam, Berlin, Paris, Rome (CET)</option>
+          <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">Athens, Helsinki, Kyiv (EET)</option>
+          <option value="MSK-3">Moscow (MSK)</option>
+        </optgroup>
+        <optgroup label="Americas">
+          <option value="EST5EDT,M3.2.0,M11.1.0">New York (ET)</option>
+          <option value="CST6CDT,M3.2.0,M11.1.0">Chicago (CT)</option>
+          <option value="MST7MDT,M3.2.0,M11.1.0">Denver (MT)</option>
+          <option value="PST8PDT,M3.2.0,M11.1.0">Los Angeles (PT)</option>
+          <option value="ART3">Buenos Aires (ART)</option>
+          <option value="BRT3BRST,M10.3.0/0,M2.3.0/0">São Paulo (BRT)</option>
+        </optgroup>
+        <optgroup label="Africa / Middle East">
+          <option value="WAT-1">Lagos (WAT)</option>
+          <option value="CAT-2">Johannesburg (CAT)</option>
+          <option value="EAT-3">Nairobi (EAT)</option>
+          <option value="GST-4">Dubai (GST)</option>
+        </optgroup>
+        <optgroup label="Asia">
+          <option value="IST-5:30">Mumbai (IST)</option>
+          <option value="ICT-7">Bangkok (ICT)</option>
+          <option value="CST-8">Beijing, Shanghai (CST)</option>
+          <option value="JST-9">Tokyo (JST)</option>
+          <option value="KST-9">Seoul (KST)</option>
+        </optgroup>
+        <optgroup label="Pacific">
+          <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Sydney (AEST)</option>
+          <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Auckland (NZST)</option>
+        </optgroup>
+      </select>
+
+      <label>SSID</label>
+      <input id="ssid" type="text">
+
+      <label>Password</label>
+      <div class="password-wrapper">
+        <input id="password" type="password" placeholder="••••••••">
+        <button type="button" class="eye-btn" onclick="togglePassword('password', this)">
+          <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="dhcpMode" checked>
+        <label for="dhcpMode">DHCP (Automatic)</label>
+      </div>
+
+      <div id="staticFields">
+        <label>IP Address</label>
+        <input id="ip" type="text">
+
+        <label>Subnet Mask</label>
+        <input id="subnet" type="text">
+
+        <label>Gateway</label>
+        <input id="gateway" type="text">
+
+        <label>DNS</label>
+        <input id="dns" type="text">
+      </div>
+
+      <button onclick="saveWifi()" class="save-btn">
+        <svg id="saveWifiIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save WiFi
+      </button>
+    </div>
+
+    <div id="mqtt" class="tab-content">
+      <div class="checkbox-group" style="margin-bottom: 16px;">
+        <input type="checkbox" id="mqttEnabled">
+        <label for="mqttEnabled">Enable MQTT</label>
+      </div>
+
+      <label>Broker</label>
+      <input id="mqttBroker" type="text" placeholder="192.168.1.100">
+
+      <label>Port</label>
+      <input id="mqttPort" type="number" value="1883">
+
+      <label>Username</label>
+      <input id="mqttUsername" type="text">
+
+      <label>Password</label>
+      <div class="password-wrapper">
+        <input id="mqttPassword" type="password" placeholder="••••••••">
+        <button type="button" class="eye-btn" onclick="togglePassword('mqttPassword', this)">
+          <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <label>Client ID</label>
+      <input id="mqttClientId" type="text" value="semaphore">
+
+      <label>Topic prefix</label>
+      <input id="mqttTopic" type="text" value="semaphore">
+
+      <div class="mqtt-status">
+        Status: <span id="mqttStatus">—</span>
+      </div>
+
+      <button onclick="saveMqtt()" class="save-btn">
+        <svg id="saveMqttIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save MQTT
+      </button>
+    </div>
+
+    <div id="info" class="tab-content">
+      <div class="checkbox-group" style="margin-bottom:16px;">
+        <input type="checkbox" id="makeChangesPersistent" checked>
+        <label for="makeChangesPersistent">Make changes persistent</label>
+      </div>
+      <div class="info-row"><span class="info-label">IP</span><span class="info-value" id="infoIp">—</span></div>
+      <div class="info-row"><span class="info-label">SSID</span><span class="info-value" id="infoSsid">—</span></div>
+      <div class="info-row"><span class="info-label">RSSI</span><span class="info-value" id="infoRssi">—</span></div>
+      <div class="info-row"><span class="info-label">Date / Time</span><span class="info-value" id="infoDatetime">—</span></div>
+      <div class="info-row"><span class="info-label">Uptime</span><span class="info-value" id="infoUptime">—</span></div>
+      <div class="info-row"><span class="info-label">Free heap</span><span class="info-value" id="infoHeap">—</span></div>
+      <div class="info-row"><span class="info-label">MQTT</span><span class="info-value" id="infoMqtt">—</span></div>
+      <div class="info-row"><span class="info-label">MAC</span><span class="info-value" id="infoMac">—</span></div>
+      <div class="info-row"><span class="info-label">CPU Clock</span><span class="info-value" id="infoCpu">—</span></div>
+      <div class="info-row"><span class="info-label">Chip</span><span class="info-value" id="infoChip">—</span></div>
+      <div class="info-row"><span class="info-label">WiFi channel</span><span class="info-value" id="infoChannel">—</span></div>
+    </div>
+    </div><!-- /.tab-viewport -->
+
+    <div class="footer-spacer"></div>
+    <footer class="app-footer">
+      <a href="https://makerworld.com/it/@mary83" target="_blank" rel="noopener" class="footer-link">
+        <img src="dm-design-logo-nobg.svg" class="footer-logo" alt="DM Design">
+        <span>Dream • Make • Repeat</span>
+      </a>
+    </footer>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+
+</html>

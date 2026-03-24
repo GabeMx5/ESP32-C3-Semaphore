@@ -1,0 +1,15 @@
+{
+    "leds": [
+        {"r": 0, "g": 255, "b": 0, "on": false, "blink": false},
+        {"r": 255, "g": 255, "b": 0, "on": false, "blink": false},
+        {"r": 255, "g": 0, "b": 0, "on": false, "blink": false}
+    ],
+    "cycle": false,
+    "party": false,
+    "partyMadness": 5,
+    "rainbow": false,
+    "rainbowCycleTime": 5,
+    "topLedTime": 5,
+    "middleLedTime": 2,
+    "bottomLedTime": 5
+}
