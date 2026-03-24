@@ -32,6 +32,7 @@ The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **b
 | **Rainbow** | Continuous HSV spectrum scroll with configurable cycle time |
 | **Random Yes/No** | Middle LED blinks with increasing speed and reveals green (yes) or red (no) |
 | **Guess** | Game: the user picks a LED, a 24-step 500 ms→50 ms animation runs, then the firmware reveals the winning LED |
+| **Morse Code** | Flashes all LEDs in Morse code for any text entered by the user (A–Z, spaces supported) |
 
 Effects are mutually exclusive: enabling one automatically disables the others.
 
@@ -72,6 +73,7 @@ Enable effects with configurable parameters:
 - Rainbow cycle time
 - **Random Yes/No** button with dice animation
 - **Guess** button with LED selection, spinning animation during the game, and WINNER/LOOSER card with dedicated icons
+- **Morse Code** button: enter any text and all LEDs flash the message in Morse code
 
 ### TIMER Tab
 ![TIMER](screenshots/TIMER.png)
