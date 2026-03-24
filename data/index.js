@@ -418,6 +418,10 @@ document.getElementById("guess-overlay").addEventListener("click", () => {
 
 // ─── Morse Code ───────────────────────────────────────────────────────────────
 
+document.getElementById("weatherBtn").addEventListener("click", () => {
+  wsSend({ type: "weatherColor" });
+});
+
 document.getElementById("morseBtn").addEventListener("click", () => {
   document.getElementById("morse-overlay").classList.add("visible");
   const input = document.getElementById("morseText");
@@ -500,7 +504,10 @@ function updateMqttStatusLabel(mqttBroker, mqttConnected) {
   }
 }
 
+let lastSysInfo = null;
+
 function onSysInfo(data) {
+  lastSysInfo = data;
   document.getElementById("infoIp").textContent     = data.ip       || "—";
   document.getElementById("infoSsid").textContent   = data.ssid     || "—";
   document.getElementById("infoRssi").textContent   = data.rssi != null ? `${data.rssi} dBm` : "—";

@@ -28,6 +28,10 @@ private:
     unsigned long lastBlinkTime = 0;
     bool          restoreNeeded = false;
 
+    // Show color (temporary)
+    bool          showColorRunning   = false;
+    unsigned long showColorRestoreAt = 0;
+
     // Random Yes/No
     enum class RandomYNState { IDLE, BLINK, RESULT };
     RandomYNState randomYNState      = RandomYNState::IDLE;
@@ -372,6 +376,19 @@ public:
 
     // ── Random Yes/No ─────────────────────────────────────────────────────────
 
+    void showColor(uint8_t r, uint8_t g, uint8_t b, unsigned long durationMs = 5000)
+    {
+        cycleEnabled      = false;
+        partyEnabled      = false;
+        rainbowEnabled    = false;
+        randomYNState     = RandomYNState::IDLE;
+        showColorRunning  = true;
+        showColorRestoreAt = millis() + durationMs;
+        uint32_t c = strip.Color(r, g, b);
+        for (int i = 0; i < LED_COUNT; i++) strip.setPixelColor(i, c);
+        strip.show();
+    }
+
     void startRandomYesNo()
     {
         cycleEnabled   = false;
@@ -470,6 +487,15 @@ public:
             strip.clear();
             strip.show();
             restoreAll();
+            return;
+        }
+        if (showColorRunning)
+        {
+            if (millis() >= showColorRestoreAt)
+            {
+                showColorRunning = false;
+                restoreNeeded    = true;
+            }
             return;
         }
         if (guessRunning)

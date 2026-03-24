@@ -41,72 +41,56 @@ public:
 
     void setLocation(float lat, float lon)
     {
-        _lat          = lat;
-        _lon          = lon;
+        _lat = lat;
+        _lon = lon;
         weather.valid = false;
-        _lastFetch    = 0;
     }
 
     void loop()
     {
-        // throttle debug to once every 5s
-        if (millis() - _lastDebug >= 5000)
-        {
-            _lastDebug = millis();
-            Serial.printf("[Geo] status — lat=%.4f lon=%.4f wifi=%d lastFetch=%lus ago\n",
-                          _lat, _lon, WiFi.status(),
-                          _lastFetch > 0 ? (millis() - _lastFetch) / 1000 : 0);
-        }
-
         if (_lat == 0.0f && _lon == 0.0f) return;
         if (WiFi.status() != WL_CONNECTED) return;
-        if (_lastFetch > 0 && millis() - _lastFetch < GEO_UPDATE_INTERVAL_MS) return;
+        if (millis() - _lastFetch < GEO_UPDATE_INTERVAL_MS && _lastFetch > 0) return;
 
-        Serial.println("[Geo] calling fetch()...");
         fetch();
         _lastFetch = millis();
     }
 
 private:
-    float         _lat        = 0.0f;
-    float         _lon        = 0.0f;
-    unsigned long _lastFetch  = 0;
-    unsigned long _lastDebug  = 0;
+    float         _lat       = 0.0f;
+    float         _lon       = 0.0f;
+    unsigned long _lastFetch = 0;
 
     void fetch()
     {
-        String url = String("https://api.open-meteo.com/v1/forecast") +
-                     "?latitude="  + String(_lat, 6) +
-                     "&longitude=" + String(_lon, 6) +
+        String url = "https://api.open-meteo.com/v1/forecast"
+                     "?latitude="        + String(_lat, 6) +
+                     "&longitude="       + String(_lon, 6) +
                      "&current_weather=true";
-
-        Serial.printf("[Geo] Fetching: %s\n", url.c_str());
 
         WiFiClientSecure client;
         client.setInsecure();
-
         HTTPClient http;
-        http.setTimeout(10000);
-        http.begin(client, url);
-        http.addHeader("Accept", "application/json");
+        http.setTimeout(8000);
+
+        if (!http.begin(client, url))
+        {
+            Serial.println("[Geo] http.begin failed");
+            return;
+        }
 
         int code = http.GET();
-        Serial.printf("[Geo] HTTP status: %d\n", code);
-
         if (code != 200)
         {
-            Serial.printf("[Geo] Error: %s\n", http.errorToString(code).c_str());
+            Serial.printf("[Geo] HTTP error: %d\n", code);
             http.end();
             return;
         }
 
-        String payload = http.getString();
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, http.getStream());
         http.end();
 
-        Serial.printf("[Geo] Payload (%d bytes): %.120s\n", payload.length(), payload.c_str());
-
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, payload);
         if (err)
         {
             Serial.printf("[Geo] JSON error: %s\n", err.c_str());
@@ -114,12 +98,6 @@ private:
         }
 
         JsonObject cw = doc["current_weather"];
-        if (cw.isNull())
-        {
-            Serial.println("[Geo] current_weather missing in response");
-            return;
-        }
-
         weather.weatherCode = cw["weathercode"] | -1;
         weather.temperature = cw["temperature"] | 0.0f;
         weather.windSpeed   = cw["windspeed"]   | 0.0f;
@@ -128,9 +106,8 @@ private:
         weather.valid       = true;
         weather.lastUpdate  = millis();
 
-        Serial.printf("[Geo] OK — code=%d temp=%.1f°C wind=%.1fkm/h condition=%d\n",
-                      weather.weatherCode, weather.temperature,
-                      weather.windSpeed, (int)weather.condition);
+        Serial.printf("[Geo] Weather updated: code=%d temp=%.1f condition=%d\n",
+                      weather.weatherCode, weather.temperature, (int)weather.condition);
     }
 
     static WeatherCondition mapCondition(int code)
