@@ -8,9 +8,8 @@ A smart RGB traffic light based on the **Seeed XIAO ESP32-C3**, controllable via
 
 | Component | Detail |
 |---|---|
-| MCU | Seeed XIAO ESP32-C3 (RISC-V) |
+| MCU | ESP32-C3 with built-in SSD1306 OLED 128×64 |
 | LED | 3× WS2812B (NeoPixel) on GPIO 10 |
-| Display | OLED SSD1306 128×64 I²C (SDA GPIO 5, SCL GPIO 6) |
 | Storage | LittleFS on internal flash |
 
 The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **bottom = LED 0**.
@@ -114,6 +113,46 @@ Command topic: `{topicPrefix}/cmd` (JSON format, same protocol as WebSocket).
 | `/wifi.json` | WiFi credentials and IP configuration |
 | `/mqtt.json` | MQTT broker configuration |
 | `/timers.json` | Timer definitions |
+
+---
+
+## Wiring
+
+### Components
+- ESP32-C3 with built-in SSD1306 OLED display
+- 3× WS2812B LEDs (or a strip of 3)
+
+### Diagram
+
+```
+                    ┌─────────────────────┐
+                    │     ESP32-C3        │
+                    │   (built-in OLED)   │
+                    │                     │
+               5V  ─┤ 5V              GND ├─ GND
+                    │                     │
+                    │         D10 (GPIO10)├──────────┐
+                    └─────────────────────┘          │
+                                                     │
+          ┌──────────────────────────────────────────┘
+          │         WS2812B chain
+          │
+          ▼
+    ┌──────────┐      ┌──────────┐      ┌──────────┐
+    │  LED 2   │      │  LED 1   │      │  LED 0   │
+    │  (top)   ├─DO──►│ (middle) ├─DO──►│ (bottom) │
+    │ DIN VCC GND    │ DIN VCC GND    │ DIN VCC GND
+    └──┬───┬───┘      └──────────┘      └──────────┘
+       │   │
+      5V  GND
+```
+
+### Pin Summary
+
+| Signal | GPIO |
+|---|---|
+| LED data | GPIO 10 |
+| Power (LEDs) | 5V |
 
 ---
 
