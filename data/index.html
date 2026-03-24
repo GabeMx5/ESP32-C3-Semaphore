@@ -22,6 +22,16 @@
     <span class="disconnected-title">Device lost</span>
     <span class="disconnected-sub" id="reconnectMsg">Reconnecting...</span>
   </div>
+  <div id="morse-overlay">
+    <div class="morse-card">
+      <p class="guess-heading">Morse Code</p>
+      <input type="text" id="morseText" value="SOS" maxlength="64" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      <div class="morse-actions">
+        <button id="morseCancelBtn" class="morse-cancel-btn">Cancel</button>
+        <button id="morseConfirmBtn" class="action-btn">Send</button>
+      </div>
+    </div>
+  </div>
   <div id="guess-overlay">
     <div class="guess-card">
       <div id="guess-phase-pick">
@@ -125,6 +135,25 @@
             <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
           </svg>
           Random Yes/No
+        </button>
+      </div>
+      <div class="option-row action-row">
+        <button id="morseBtn" class="action-btn">
+          <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="5" y2="12"/>
+            <line x1="7" y1="12" x2="11" y2="12"/>
+            <line x1="13" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="7"  x2="5" y2="7"/>
+            <line x1="7" y1="7"  x2="9" y2="7"/>
+            <line x1="11" y1="7" x2="13" y2="7"/>
+            <line x1="15" y1="7" x2="17" y2="7"/>
+            <line x1="19" y1="7" x2="21" y2="7"/>
+            <line x1="3" y1="17" x2="7" y2="17"/>
+            <line x1="9" y1="17" x2="11" y2="17"/>
+            <line x1="13" y1="17" x2="15" y2="17"/>
+            <line x1="17" y1="17" x2="21" y2="17"/>
+          </svg>
+          Morse Code
         </button>
       </div>
       <div class="option-row action-row">

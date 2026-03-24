@@ -300,6 +300,13 @@ void processCommand(JsonDocument &doc)
         broadcastPartyStatus();
         broadcastRainbowStatus();
     }
+    else if (strcmp(type, "morse") == 0)
+    {
+        ledController.startMorse(doc["text"] | "SOS");
+        broadcastCycleStatus();
+        broadcastPartyStatus();
+        broadcastRainbowStatus();
+    }
     else if (strcmp(type, "setConfig") == 0)
     {
         configController.setMakeChangesPersistent(doc["makeChangesPersistent"] | true);

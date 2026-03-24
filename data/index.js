@@ -407,6 +407,32 @@ document.getElementById("guess-overlay").addEventListener("click", () => {
   if (document.getElementById("guess-phase-result").classList.contains("active")) closeGuessOverlay();
 });
 
+// ─── Morse Code ───────────────────────────────────────────────────────────────
+
+document.getElementById("morseBtn").addEventListener("click", () => {
+  document.getElementById("morse-overlay").classList.add("visible");
+  const input = document.getElementById("morseText");
+  input.focus();
+  input.select();
+});
+
+function sendMorse() {
+  const text = document.getElementById("morseText").value.trim() || "SOS";
+  document.getElementById("morse-overlay").classList.remove("visible");
+  wsSend({ type: "morse", text });
+}
+
+document.getElementById("morseConfirmBtn").addEventListener("click", sendMorse);
+
+document.getElementById("morseCancelBtn").addEventListener("click", () => {
+  document.getElementById("morse-overlay").classList.remove("visible");
+});
+
+document.getElementById("morseText").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMorse();
+  if (e.key === "Escape") document.getElementById("morse-overlay").classList.remove("visible");
+});
+
 // ─── Rainbow ──────────────────────────────────────────────────────────────────
 
 const rainbowBtn           = document.getElementById("rainbowBtn");

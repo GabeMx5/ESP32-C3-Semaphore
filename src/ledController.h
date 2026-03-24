@@ -72,6 +72,45 @@ private:
         }
     }
 
+    // Morse
+    struct MorseEvent { bool on; uint16_t ms; };
+    static const int MAX_MORSE_EVENTS = 512;
+    MorseEvent    morseSeq[MAX_MORSE_EVENTS];
+    int           morseTotalEvents = 0;
+    int           morseEventIdx    = 0;
+    unsigned long morseNext        = 0;
+    bool          morseRunning     = false;
+
+    static const char* morseChar(int idx)
+    {
+        static const char* tbl[26] = {
+            ".-","-...","-.-.","-..",".","..-.","--.","....",
+            "..","---","-.-.",".-..","--","-.","---",".--.",
+            "--.-",".-.","...","-","..-","...-",".--","-..-",
+            "-.--","--.."
+        };
+        if (idx < 0 || idx >= 26) return nullptr;
+        return tbl[idx];
+    }
+
+    void morseTick()
+    {
+        if (!morseRunning || millis() < morseNext) return;
+        if (morseEventIdx >= morseTotalEvents)
+        {
+            morseRunning = false;
+            restoreAll();
+            return;
+        }
+        MorseEvent ev = morseSeq[morseEventIdx++];
+        if (ev.on)
+            for (int i = 0; i < LED_COUNT; i++) strip.setPixelColor(i, strip.Color(255, 255, 255));
+        else
+            for (int i = 0; i < LED_COUNT; i++) strip.setPixelColor(i, 0);
+        strip.show();
+        morseNext = millis() + ev.ms;
+    }
+
     // Guess
     static constexpr int GUESS_STEPS = 24;
 
@@ -371,6 +410,57 @@ public:
 
     bool isGuessRunning() { return guessRunning; }
 
+    // ── Morse ─────────────────────────────────────────────────────────────────
+
+    void startMorse(const char* text)
+    {
+        cycleEnabled   = false;
+        partyEnabled   = false;
+        rainbowEnabled = false;
+        randomYNState  = RandomYNState::IDLE;
+        guessRunning   = false;
+
+        morseTotalEvents = 0;
+        morseEventIdx    = 0;
+
+        static const uint16_t DOT_MS  = 200;
+        static const uint16_t DASH_MS = 600;
+        static const uint16_t ELEM_MS = 200;
+        static const uint16_t CHAR_MS = 600;
+        static const uint16_t WORD_MS = 1400;
+
+        for (int i = 0; text[i] != '\0' && morseTotalEvents < MAX_MORSE_EVENTS - 10; i++)
+        {
+            char c = toupper((unsigned char)text[i]);
+            if (c == ' ')
+            {
+                if (morseTotalEvents > 0 && !morseSeq[morseTotalEvents - 1].on)
+                    morseSeq[morseTotalEvents - 1].ms = WORD_MS;
+                else
+                    morseSeq[morseTotalEvents++] = {false, WORD_MS};
+                continue;
+            }
+            if (c < 'A' || c > 'Z') continue;
+            const char* sym = morseChar(c - 'A');
+            if (!sym) continue;
+            int len = strlen(sym);
+            for (int j = 0; j < len; j++)
+            {
+                morseSeq[morseTotalEvents++] = {true, sym[j] == '-' ? DASH_MS : DOT_MS};
+                if (j < len - 1)
+                    morseSeq[morseTotalEvents++] = {false, ELEM_MS};
+            }
+            morseSeq[morseTotalEvents++] = {false, CHAR_MS};
+        }
+
+        morseRunning = (morseTotalEvents > 0);
+        morseNext    = millis();
+        for (int i = 0; i < LED_COUNT; i++) strip.setPixelColor(i, 0);
+        strip.show();
+    }
+
+    bool isMorseRunning() { return morseRunning; }
+
     // ── Update (call every loop) ───────────────────────────────────────────────
 
     void update()
@@ -378,6 +468,11 @@ public:
         if (guessRunning)
         {
             guessTick();
+            return;
+        }
+        if (morseRunning)
+        {
+            morseTick();
             return;
         }
         if (randomYNState != RandomYNState::IDLE)
