@@ -1,3 +1,5 @@
+#define FIRMWARE_VERSION "1.0"
+
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <ESPAsyncWebServer.h>
@@ -157,6 +159,7 @@ void sendSysInfo(AsyncWebSocketClient *client)
 {
     JsonDocument doc;
     doc["type"]          = "sysInfo";
+    doc["version"]       = FIRMWARE_VERSION;
     doc["ip"]            = WiFi.localIP().toString();
     doc["ssid"]          = WiFi.SSID();
     doc["rssi"]          = WiFi.RSSI();

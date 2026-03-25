@@ -3,6 +3,7 @@ name: Build and Release
 on:
   push:
     branches: [main]
+    tags: ['v*']
 
 jobs:
   build:
@@ -28,14 +29,20 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32c3
 
-      - name: Get short SHA
-        id: sha
-        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Create release
+      - name: Dev release (main push)
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ steps.sha.outputs.short }}
-          name: Build ${{ steps.sha.outputs.short }}
+          tag_name: dev-latest
+          name: Dev build
+          prerelease: true
+          files: .pio/build/esp32c3/firmware.bin
+          make_latest: false
+
+      - name: Stable release (tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
           files: .pio/build/esp32c3/firmware.bin
           make_latest: true
