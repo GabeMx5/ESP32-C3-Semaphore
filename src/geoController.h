@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 
-#define GEO_UPDATE_INTERVAL_MS 60000UL
+#define GEO_UPDATE_INTERVAL_MS 1800000UL
 
 enum class WeatherCondition {
     UNKNOWN,
@@ -53,7 +53,6 @@ public:
         if (millis() - _lastFetch < GEO_UPDATE_INTERVAL_MS && _lastFetch > 0) return;
 
         fetch();
-        _lastFetch = millis();
     }
 
 private:
@@ -87,9 +86,11 @@ private:
             return;
         }
 
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, http.getStream());
+        String body = http.getString();
         http.end();
+
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, body);
 
         if (err)
         {
@@ -105,6 +106,7 @@ private:
         weather.condition   = mapCondition(weather.weatherCode);
         weather.valid       = true;
         weather.lastUpdate  = millis();
+        _lastFetch          = millis();
 
         Serial.printf("[Geo] Weather updated: code=%d temp=%.1f condition=%d\n",
                       weather.weatherCode, weather.temperature, (int)weather.condition);

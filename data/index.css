@@ -873,6 +873,12 @@ button:focus-visible {
   gap: 8px;
 }
 
+.action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 @media (hover: hover) {
   .action-btn:hover {
     background: rgba(177,255,66,0.15);

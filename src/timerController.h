@@ -16,7 +16,9 @@ struct TimerEntry {
     uint8_t  hour;
     uint8_t  minute;
     uint8_t  second;
-    String   action;        // "all_off","led0","led1","led2","cycle","party","rainbow"
+    String   action;        // "all_off","led0","led1","led2","cycle","party","rainbow","random_yes_no","morse"
+    String   morseText;
+    uint8_t  guessLed  = 0;
     uint8_t  ledR, ledG, ledB;
     uint32_t duration = 0;  // seconds; 0 = no limit
     // runtime
@@ -36,6 +38,10 @@ public:
     std::function<void(bool)> onCycle;
     std::function<void(bool)> onParty;
     std::function<void(bool)> onRainbow;
+    std::function<void()>              onRandomYesNo;
+    std::function<void(const String&)> onMorse;
+    std::function<void(int)>           onGuess;
+    std::function<void()>              onWeatherColor;
 
 private:
     TimerEntry entries[TIMERS_MAX];
@@ -71,8 +77,10 @@ private:
         t.enabled  = obj["enabled"]  | true;
         t.days     = parseDaysMask(obj["days"]);
         parseTime(obj["time"] | "00:00:00", t.hour, t.minute, t.second);
-        t.action   = obj["action"]   | "all_off";
-        parseColor(obj["ledColor"]   | "#ffffff", t.ledR, t.ledG, t.ledB);
+        t.action    = obj["action"]    | "all_off";
+        t.morseText = obj["morseText"] | "SOS";
+        t.guessLed  = obj["guessLed"]  | (uint8_t)0;
+        parseColor(obj["ledColor"]    | "#ffffff", t.ledR, t.ledG, t.ledB);
         t.duration = obj["duration"] | (uint32_t)0;
         t._lastDay  = -1;
         t._lastHour = 255;
@@ -91,7 +99,9 @@ private:
         char timeBuf[9];
         snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d:%02d", t.hour, t.minute, t.second);
         obj["time"]     = timeBuf;
-        obj["action"]   = t.action;
+        obj["action"]    = t.action;
+        obj["morseText"] = t.morseText;
+        obj["guessLed"]  = t.guessLed;
         char colBuf[8];
         snprintf(colBuf, sizeof(colBuf), "#%02x%02x%02x", t.ledR, t.ledG, t.ledB);
         obj["ledColor"] = colBuf;
@@ -104,9 +114,13 @@ private:
         else if (t.action == "led0"    && onLed)     onLed(0, t.ledR, t.ledG, t.ledB);
         else if (t.action == "led1"    && onLed)     onLed(1, t.ledR, t.ledG, t.ledB);
         else if (t.action == "led2"    && onLed)     onLed(2, t.ledR, t.ledG, t.ledB);
-        else if (t.action == "cycle"   && onCycle)   onCycle(true);
-        else if (t.action == "party"   && onParty)   onParty(true);
-        else if (t.action == "rainbow" && onRainbow) onRainbow(true);
+        else if (t.action == "cycle"          && onCycle)        onCycle(true);
+        else if (t.action == "party"          && onParty)        onParty(true);
+        else if (t.action == "rainbow"        && onRainbow)      onRainbow(true);
+        else if (t.action == "random_yes_no"  && onRandomYesNo)   onRandomYesNo();
+        else if (t.action == "morse"          && onMorse)         onMorse(t.morseText);
+        else if (t.action == "guess"          && onGuess)         onGuess(t.guessLed);
+        else if (t.action == "weather_color"  && onWeatherColor)  onWeatherColor();
         if (t.duration > 0) {
             t._active  = true;
             t._firedAt = millis();

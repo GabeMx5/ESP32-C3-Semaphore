@@ -95,6 +95,7 @@ function connect() {
     reconnectDelay = 1000;
     hideOverlay();
     startPing();
+    requestInfo();
   });
 
   ws.addEventListener("message", (event) => {
@@ -528,6 +529,7 @@ function onSysInfo(data) {
   document.getElementById("infoChip").textContent    = data.chipModel ? `${data.chipModel} rev${data.chipRevision}` : "—";
   document.getElementById("infoChannel").textContent = data.wifiChannel != null ? `${data.wifiChannel}` : "—";
   const conditionLabels = ["—", "Clear", "Partly cloudy", "Foggy", "Drizzle", "Rainy", "Snowy", "Stormy"];
+  document.getElementById("weatherBtn").disabled = data.weatherCode == null || !data.latitude;
   if (data.weatherCode != null) {
     const cond = conditionLabels[data.weatherCondition] || "—";
     document.getElementById("infoWeather").textContent     = `${cond} (code ${data.weatherCode})`;
@@ -910,7 +912,11 @@ const TIMER_ACTIONS = [
   { value: "led0",     label: "LED Bottom"     },
   { value: "cycle",    label: "Cycle ON"       },
   { value: "party",    label: "Party ON"       },
-  { value: "rainbow",  label: "Rainbow ON"     },
+  { value: "rainbow",       label: "Rainbow ON"     },
+  { value: "random_yes_no", label: "Random Yes/No"  },
+  { value: "morse",         label: "Morse"          },
+  { value: "guess",         label: "Guess"          },
+  { value: "weather_color", label: "Weather Color"  },
 ];
 
 function daysSummary(days) {
@@ -936,10 +942,12 @@ function addTimer() {
     enabled:  true,
     days:     [0,1,2,3,4],
     time:     "08:00:00",
-    action:   "all_off",
-    ledColor: "#ffffff",
-    duration: 0,
-    expanded: true,
+    action:    "all_off",
+    ledColor:  "#ffffff",
+    morseText: "SOS",
+    guessLed:  0,
+    duration:  0,
+    expanded:  true,
   });
   renderTimers();
 }
@@ -1011,6 +1019,24 @@ function renderTimerCard(t) {
        </div>`
     : "";
 
+  const guessLedRow = t.action === "guess"
+    ? `<div class="timer-row">
+        <label>LED</label>
+        <select onchange="setTimerField(${t.id},'guessLed',parseInt(this.value))">
+          <option value="0"${(t.guessLed||0)===0?" selected":""}>Bottom</option>
+          <option value="1"${(t.guessLed||0)===1?" selected":""}>Middle</option>
+          <option value="2"${(t.guessLed||0)===2?" selected":""}>Top</option>
+        </select>
+       </div>`
+    : "";
+
+  const morseRow = t.action === "morse"
+    ? `<div class="timer-row">
+        <label>Text</label>
+        <input type="text" value="${t.morseText || "SOS"}" maxlength="32" onchange="setTimerField(${t.id},'morseText',this.value.toUpperCase())">
+       </div>`
+    : "";
+
   const durVal = t.duration || 0;
 
   return `
@@ -1037,10 +1063,12 @@ function renderTimerCard(t) {
           <select onchange="setTimerField(${t.id},'action',this.value)">${actOptions}</select>
         </div>
         ${colorRow}
-        <div class="timer-row">
+        ${morseRow}
+        ${guessLedRow}
+        ${!["morse","random_yes_no","guess","weather_color"].includes(t.action) ? `<div class="timer-row">
           <label>Duration (s)</label>
           <input type="number" class="time-input" min="0" step="1" value="${durVal}" placeholder="0 = no limit" onchange="setTimerField(${t.id},'duration',parseInt(this.value)||0)">
-        </div>
+        </div>` : ""}
         <button class="timer-delete-btn" onclick="removeTimer(${t.id})">Delete</button>
       </div></div>
     </div>`;
@@ -1059,10 +1087,12 @@ function onTimerConfig(data) {
     enabled:  t.enabled ?? true,
     days:     Array.isArray(t.days) ? t.days : [],
     time:     t.time     || "00:00",
-    action:   t.action   || "all_off",
-    ledColor: t.ledColor || "#ffffff",
-    duration: t.duration || 0,
-    expanded: false,
+    action:    t.action    || "all_off",
+    ledColor:  t.ledColor  || "#ffffff",
+    morseText: t.morseText || "SOS",
+    guessLed:  t.guessLed  || 0,
+    duration:  t.duration  || 0,
+    expanded:  false,
   }));
   timerNextId = timers.length > 0 ? Math.max(...timers.map(t => t.id)) + 1 : 0;
   renderTimers();
@@ -1077,9 +1107,11 @@ function saveTimers() {
       enabled:  t.enabled,
       days:     t.days,
       time:     t.time,
-      action:   t.action,
-      ledColor: t.ledColor,
-      duration: t.duration || 0,
+      action:    t.action,
+      ledColor:  t.ledColor,
+      morseText: t.morseText || "SOS",
+      guessLed:  t.guessLed  || 0,
+      duration:  t.duration  || 0,
     })),
   });
 }

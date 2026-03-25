@@ -171,6 +171,8 @@ void sendSysInfo(AsyncWebSocketClient *client)
     doc["chipModel"]     = ESP.getChipModel();
     doc["chipRevision"]  = ESP.getChipRevision();
     doc["wifiChannel"]   = WiFi.channel();
+    doc["latitude"]  = configController.getLatitude();
+    doc["longitude"] = configController.getLongitude();
     if (geoController.weather.valid) {
         doc["weatherCode"]      = geoController.weather.weatherCode;
         doc["weatherTemp"]      = geoController.weather.temperature;
@@ -180,6 +182,26 @@ void sendSysInfo(AsyncWebSocketClient *client)
     String response;
     serializeJson(doc, response);
     client->text(response);
+}
+
+void applyWeatherColor()
+{
+    if (!geoController.weather.valid) return;
+    float temp  = geoController.weather.temperature;
+    float t     = max(5.0f, min(30.0f, temp));
+    float ratio = (t - 5.0f) / 25.0f;
+    float hue   = 210.0f * (1.0f - ratio);
+    float h = hue / 60.0f;
+    float c = 1.0f;
+    float x = c * (1.0f - fabsf(fmodf(h, 2.0f) - 1.0f));
+    float r = 0, g = 0, b = 0;
+    if      (h < 1) { r = c; g = x; }
+    else if (h < 2) { r = x; g = c; }
+    else if (h < 3) { g = c; b = x; }
+    else if (h < 4) { g = x; b = c; }
+    else if (h < 5) { r = x; b = c; }
+    else            { r = c; b = x; }
+    ledController.showColor((uint8_t)(r*255), (uint8_t)(g*255), (uint8_t)(b*255));
 }
 
 // ─── Command processing (shared between WebSocket and MQTT) ──────────────────
@@ -326,23 +348,7 @@ void processCommand(JsonDocument &doc)
     {
         Serial.printf("[weatherColor] valid=%d temp=%.1f\n",
                       geoController.weather.valid, geoController.weather.temperature);
-        if (!geoController.weather.valid) return;
-        float temp   = geoController.weather.temperature;
-        float t      = max(5.0f, min(30.0f, temp));
-        float ratio  = (t - 5.0f) / 25.0f;
-        float hue    = 210.0f * (1.0f - ratio);   // 210=blue → 0=red
-        // HSV to RGB (S=1, V=1)
-        float h = hue / 60.0f;
-        float c = 1.0f;
-        float x = c * (1.0f - fabsf(fmodf(h, 2.0f) - 1.0f));
-        float r = 0, g = 0, b = 0;
-        if      (h < 1) { r = c; g = x; }
-        else if (h < 2) { r = x; g = c; }
-        else if (h < 3) { g = c; b = x; }
-        else if (h < 4) { g = x; b = c; }
-        else if (h < 5) { r = x; b = c; }
-        else            { r = c; b = x; }
-        ledController.showColor((uint8_t)(r*255), (uint8_t)(g*255), (uint8_t)(b*255));
+        applyWeatherColor();
     }
     else if (strcmp(type, "setLocation") == 0)
     {
@@ -702,6 +708,27 @@ void setup()
             ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
             ledController.setParty(false, ledController.getPartyMadness());
         }
+        broadcastCycleStatus();
+        broadcastPartyStatus();
+        broadcastRainbowStatus();
+    };
+    timerController.onWeatherColor = []() {
+        applyWeatherColor();
+    };
+    timerController.onGuess = [](int led) {
+        ledController.startGuess(led);
+        broadcastCycleStatus();
+        broadcastPartyStatus();
+        broadcastRainbowStatus();
+    };
+    timerController.onMorse = [](const String& text) {
+        ledController.startMorse(text.c_str());
+        broadcastCycleStatus();
+        broadcastPartyStatus();
+        broadcastRainbowStatus();
+    };
+    timerController.onRandomYesNo = []() {
+        ledController.startRandomYesNo();
         broadcastCycleStatus();
         broadcastPartyStatus();
         broadcastRainbowStatus();
