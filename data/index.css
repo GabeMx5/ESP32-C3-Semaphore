@@ -1,3 +1,70 @@
+#ota-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+
+#ota-overlay.visible { display: flex; }
+
+#updateBtn.update-available {
+  background: var(--primary);
+  color: #0d1117;
+  animation: ota-pulse 2s infinite;
+}
+
+#updateBtn.checking {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ota-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.ota-step {
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+  padding-left: 20px;
+  position: relative;
+}
+
+.ota-step::before {
+  content: "○";
+  position: absolute;
+  left: 0;
+}
+
+.ota-step.active {
+  color: var(--primary);
+}
+
+.ota-step.active::before {
+  content: "◉";
+  animation: ota-pulse 1s infinite;
+}
+
+.ota-step.done {
+  color: #b1ff42;
+}
+
+.ota-step.done::before {
+  content: "●";
+  animation: none;
+}
+
+@keyframes ota-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
 
 #restore-overlay {
   display: none;
