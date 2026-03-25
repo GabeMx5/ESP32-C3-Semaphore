@@ -509,6 +509,7 @@ let lastSysInfo = null;
 
 function onSysInfo(data) {
   lastSysInfo = data;
+  document.getElementById("infoVersion").textContent = data.version  ? `v${data.version}` : "—";
   document.getElementById("infoIp").textContent     = data.ip       || "—";
   document.getElementById("infoSsid").textContent   = data.ssid     || "—";
   document.getElementById("infoRssi").textContent   = data.rssi != null ? `${data.rssi} dBm` : "—";

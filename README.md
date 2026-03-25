@@ -1,5 +1,7 @@
 # ESP32-C3 Semaphore
 
+<p align="center"><img src="screenshots/Semaphore_small.gif" width="240" alt="Semaphore demo"/></p>
+
 A smart RGB traffic light based on the **Seeed XIAO ESP32-C3**, controllable via browser with a PWA web interface, MQTT/Home Assistant integration, and scheduled timers.
 
 ---
@@ -33,12 +35,27 @@ The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **b
 | **Random Yes/No** | Middle LED blinks with increasing speed and reveals green (yes) or red (no) |
 | **Guess** | Game: the user picks a LED, a 24-step 500 ms→50 ms animation runs, then the firmware reveals the winning LED |
 | **Morse Code** | Flashes all LEDs in Morse code for any text entered by the user (A–Z, spaces supported) |
+| **Weather Color** | Sets each LED to a color based on real-time weather data (see below) |
 
 Effects are mutually exclusive: enabling one automatically disables the others.
 
+### Weather Integration
+
+The device fetches real-time weather from the [Open-Meteo API](https://open-meteo.com/) every 30 minutes based on the configured location.
+
+The **Weather Color** effect maps live data to the three LEDs:
+
+| LED | Data | Color mapping |
+|---|---|---|
+| Top (LED 2) | Weather condition | Yellow = clear day, Dark blue = clear night, Steel blue = cloudy, Gray = fog, Light blue = drizzle, Blue = rain, Ice white = snow, Purple = storm |
+| Middle (LED 1) | Temperature | Blue = 5 °C → Red = 30 °C (linear HSV) |
+| Bottom (LED 0) | Humidity | Yellow = 0% → Green = 50% → Blue = 100% |
+
+Location is configurable from the Info tab via an interactive map overlay.
+
 ### Timers
 - Up to 50 timers with weekly scheduling (Monday–Sunday)
-- Available actions: `all_off`, `led0/1/2` (with RGB color), `cycle`, `party`, `rainbow`
+- Available actions: `all_off`, `led0/1/2` (with RGB color), `cycle`, `party`, `rainbow`, `random_yes_no`, `morse` (with text), `guess` (with target LED), `weather_color`
 - **Optional duration** in seconds: when elapsed, the effect is automatically stopped (0 = no limit)
 - Execution based on RTC via NTP
 
@@ -74,6 +91,7 @@ Enable effects with configurable parameters:
 - **Random Yes/No** button with dice animation
 - **Guess** button with LED selection, spinning animation during the game, and WINNER/LOOSER card with dedicated icons
 - **Morse Code** button: enter any text and all LEDs flash the message in Morse code
+- **Weather Color** button (enabled only when weather data is available): triggers the weather effect instantly
 
 ### TIMER Tab
 ![TIMER](screenshots/TIMER.png)
@@ -93,7 +111,16 @@ Configure broker, port, credentials, client ID and topic prefix. Real-time conne
 ### INFO Tab
 ![INFO](screenshots/INFO.png)
 
-System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel. Includes:
+System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel.
+
+Weather data is displayed when a location is configured:
+- **Weather** — current condition label and WMO code, with a colored dot reflecting the condition color
+- **Temperature** — value in °C, with a colored dot from blue (cold) to red (hot)
+- **Humidity** — value in %, with a colored dot from yellow (dry) to blue (humid)
+
+All dot colors are computed by the firmware and sent via WebSocket.
+
+Includes:
 - **Make changes persistent** toggle: when disabled, LED and effect changes are not written to flash (useful for temporary configurations)
 - **Backup** button: downloads a `semaphore-backup.json` file containing `config.json`, `wifi.json` and `mqtt.json`
 - **Restore** button: uploads a backup file and automatically reboots the device to apply changes
@@ -197,6 +224,7 @@ pio run --target uploadfs
 │   ├── networkManager.h      # WiFi STA/AP fallback
 │   ├── configController.h    # Load/save config.json, dirty flag
 │   ├── wifiConfigManager.h   # Network configuration persistence
+│   ├── geoController.h       # Weather API (Open-Meteo) and location
 │   └── monitorController.h   # OLED display
 └── data/                     # Web UI (LittleFS)
     ├── index.html

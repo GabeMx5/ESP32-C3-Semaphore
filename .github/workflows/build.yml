@@ -35,6 +35,14 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32c3
 
+      - name: Rename artifact (dev)
+        if: github.ref == 'refs/heads/main'
+        run: cp .pio/build/esp32c3/firmware.bin .pio/build/esp32c3/firmware-dev.bin
+
+      - name: Rename artifact (release)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cp .pio/build/esp32c3/firmware.bin .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
+
       - name: Dev release (main push)
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
@@ -42,7 +50,7 @@ jobs:
           tag_name: dev-latest
           name: Dev build
           prerelease: true
-          files: .pio/build/esp32c3/firmware.bin
+          files: .pio/build/esp32c3/firmware-dev.bin
           make_latest: false
 
       - name: Stable release (tag push)
@@ -50,5 +58,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          files: .pio/build/esp32c3/firmware.bin
+          files: .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
           make_latest: true
