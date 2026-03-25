@@ -1030,6 +1030,15 @@ button:focus-visible {
   font-family: monospace;
 }
 
+.weather-dot {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+}
+
 /* ─── Footer ─────────────────────────────────────────────────────────────────*/
 
 .footer-spacer {

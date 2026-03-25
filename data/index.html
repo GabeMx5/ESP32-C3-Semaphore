@@ -401,9 +401,9 @@
           </button>
         </span>
       </div>
-      <div class="info-row"><span class="info-label">Weather</span><span class="info-value" id="infoWeather">—</span></div>
-      <div class="info-row"><span class="info-label">Temperature</span><span class="info-value" id="infoWeatherTemp">—</span></div>
-      <div class="info-row"><span class="info-label">Wind</span><span class="info-value" id="infoWeatherWind">—</span></div>
+      <div class="info-row"><span class="info-label">Weather</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoWeather">—</span><span id="conditionDot" class="weather-dot"></span></span></div>
+      <div class="info-row"><span class="info-label">Temperature</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoWeatherTemp">—</span><span id="weatherDot" class="weather-dot"></span></span></div>
+      <div class="info-row"><span class="info-label">Humidity</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoWeatherHumidity">—</span><span id="humidityDot" class="weather-dot"></span></span></div>
       <div style="display:flex;gap:10px;margin-top:20px;">
         <button class="save-btn" style="flex:1;margin:0;" onclick="backupConfig()">
           <svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

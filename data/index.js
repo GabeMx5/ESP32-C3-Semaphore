@@ -533,13 +533,19 @@ function onSysInfo(data) {
   if (data.weatherCode != null) {
     const cond = conditionLabels[data.weatherCondition] || "—";
     document.getElementById("infoWeather").textContent     = `${cond} (code ${data.weatherCode})`;
-    document.getElementById("infoWeatherTemp").textContent = `${data.weatherTemp.toFixed(1)} °C`;
-    document.getElementById("infoWeatherWind").textContent = `${data.weatherWind.toFixed(1)} km/h`;
+    document.getElementById("infoWeatherTemp").textContent     = `${data.weatherTemp.toFixed(1)} °C`;
+    document.getElementById("infoWeatherHumidity").textContent = `${data.weatherHumidity.toFixed(0)} %`;
+    document.getElementById("conditionDot").style.background = `rgb(${data.conditionR},${data.conditionG},${data.conditionB})`;
+    document.getElementById("weatherDot").style.background   = `rgb(${data.temperatureR},${data.temperatureG},${data.temperatureB})`;
+    document.getElementById("humidityDot").style.background  = `rgb(${data.humidityR},${data.humidityG},${data.humidityB})`;
   } else {
     const hasLocation = !!parseFloat(document.getElementById("latitude").value);
-    document.getElementById("infoWeather").textContent     = hasLocation ? "Fetching..." : "No location set";
-    document.getElementById("infoWeatherTemp").textContent = "—";
-    document.getElementById("infoWeatherWind").textContent = "—";
+    document.getElementById("infoWeather").textContent         = hasLocation ? "Fetching..." : "No location set";
+    document.getElementById("infoWeatherTemp").textContent     = "—";
+    document.getElementById("infoWeatherHumidity").textContent = "—";
+    document.getElementById("conditionDot").style.background = "transparent";
+    document.getElementById("weatherDot").style.background   = "transparent";
+    document.getElementById("humidityDot").style.background  = "transparent";
   }
 }
 

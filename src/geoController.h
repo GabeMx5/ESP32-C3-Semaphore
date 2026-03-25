@@ -21,7 +21,7 @@ enum class WeatherCondition {
 struct WeatherData {
     int              weatherCode  = -1;
     float            temperature  = 0.0f;
-    float            windSpeed    = 0.0f;
+    float            humidity     = 0.0f;
     bool             isDay        = true;
     WeatherCondition condition    = WeatherCondition::UNKNOWN;
     bool             valid        = false;
@@ -63,9 +63,9 @@ private:
     void fetch()
     {
         String url = "https://api.open-meteo.com/v1/forecast"
-                     "?latitude="        + String(_lat, 6) +
-                     "&longitude="       + String(_lon, 6) +
-                     "&current_weather=true";
+                     "?latitude="  + String(_lat, 6) +
+                     "&longitude=" + String(_lon, 6) +
+                     "&current=temperature_2m,weather_code,relative_humidity_2m,is_day";
 
         WiFiClientSecure client;
         client.setInsecure();
@@ -98,11 +98,11 @@ private:
             return;
         }
 
-        JsonObject cw = doc["current_weather"];
-        weather.weatherCode = cw["weathercode"] | -1;
-        weather.temperature = cw["temperature"] | 0.0f;
-        weather.windSpeed   = cw["windspeed"]   | 0.0f;
-        weather.isDay       = (cw["is_day"]     | 1) == 1;
+        JsonObject cw = doc["current"];
+        weather.weatherCode = cw["weather_code"]           | -1;
+        weather.temperature = cw["temperature_2m"]         | 0.0f;
+        weather.isDay       = (cw["is_day"]                | 1) == 1;
+        weather.humidity    = cw["relative_humidity_2m"]   | 0.0f;
         weather.condition   = mapCondition(weather.weatherCode);
         weather.valid       = true;
         weather.lastUpdate  = millis();

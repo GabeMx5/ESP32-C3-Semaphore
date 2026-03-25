@@ -25,6 +25,10 @@ TimerController timerController;
 ConfigController configController;
 GeoController    geoController;
 
+void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
+void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
+void humidityToRgb(float humidity, uint8_t& r, uint8_t& g, uint8_t& b);
+
 // ─── Broadcast ────────────────────────────────────────────────────────────────
 
 void broadcastLedStatus()
@@ -176,18 +180,31 @@ void sendSysInfo(AsyncWebSocketClient *client)
     if (geoController.weather.valid) {
         doc["weatherCode"]      = geoController.weather.weatherCode;
         doc["weatherTemp"]      = geoController.weather.temperature;
-        doc["weatherWind"]      = geoController.weather.windSpeed;
+        doc["weatherHumidity"]  = geoController.weather.humidity;
         doc["weatherCondition"] = (int)geoController.weather.condition;
+        uint8_t wr, wg, wb;
+        weatherTempToRgb(geoController.weather.temperature, wr, wg, wb);
+        doc["temperatureR"] = wr;
+        doc["temperatureG"] = wg;
+        doc["temperatureB"] = wb;
+        uint8_t cr, cg, cb;
+        conditionToRgb(geoController.weather.condition, geoController.weather.isDay, cr, cg, cb);
+        doc["conditionR"] = cr;
+        doc["conditionG"] = cg;
+        doc["conditionB"] = cb;
+        uint8_t hr, hg, hb;
+        humidityToRgb(geoController.weather.humidity, hr, hg, hb);
+        doc["humidityR"] = hr;
+        doc["humidityG"] = hg;
+        doc["humidityB"] = hb;
     }
     String response;
     serializeJson(doc, response);
     client->text(response);
 }
 
-void applyWeatherColor()
+void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB)
 {
-    if (!geoController.weather.valid) return;
-    float temp  = geoController.weather.temperature;
     float t     = max(5.0f, min(30.0f, temp));
     float ratio = (t - 5.0f) / 25.0f;
     float hue   = 210.0f * (1.0f - ratio);
@@ -201,7 +218,55 @@ void applyWeatherColor()
     else if (h < 4) { g = x; b = c; }
     else if (h < 5) { r = x; b = c; }
     else            { r = c; b = x; }
-    ledController.showColor((uint8_t)(r*255), (uint8_t)(g*255), (uint8_t)(b*255));
+    outR = (uint8_t)(r * 255);
+    outG = (uint8_t)(g * 255);
+    outB = (uint8_t)(b * 255);
+}
+
+void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b)
+{
+    switch (cond) {
+        case WeatherCondition::CLEAR:
+            if (isDay) { r=255; g=200; b=0;   } // golden yellow
+            else       { r=0;   g=20;  b=150; } // dark blue
+            break;
+        case WeatherCondition::PARTLY_CLOUDY: r=150; g=170; b=200; break; // steel blue
+        case WeatherCondition::FOGGY:         r=160; g=160; b=160; break; // gray
+        case WeatherCondition::DRIZZLE:       r=80;  g=140; b=255; break; // light blue
+        case WeatherCondition::RAINY:         r=0;   g=60;  b=220; break; // blue
+        case WeatherCondition::SNOWY:         r=200; g=240; b=255; break; // ice white
+        case WeatherCondition::STORMY:        r=140; g=0;   b=200; break; // purple
+        default:                              r=80;  g=80;  b=80;  break; // dim gray
+    }
+}
+
+void humidityToRgb(float humidity, uint8_t& r, uint8_t& g, uint8_t& b)
+{
+    float h = max(0.0f, min(100.0f, humidity)) / 100.0f;
+    // 0% = yellow (255,200,0), 50% = green (0,200,80), 100% = blue (0,60,220)
+    if (h < 0.5f) {
+        float t = h * 2.0f;
+        r = (uint8_t)(255 * (1.0f - t));
+        g = (uint8_t)(200 * (1.0f - t) + 200 * t);
+        b = (uint8_t)(80  * t);
+    } else {
+        float t = (h - 0.5f) * 2.0f;
+        r = 0;
+        g = (uint8_t)(200 * (1.0f - t));
+        b = (uint8_t)(80  * (1.0f - t) + 220 * t);
+    }
+}
+
+void applyWeatherColor()
+{
+    if (!geoController.weather.valid) return;
+    uint8_t r2, g2, b2; // top    — condition
+    uint8_t r1, g1, b1; // middle — temperature
+    uint8_t r0, g0, b0; // bottom — humidity
+    conditionToRgb(geoController.weather.condition, geoController.weather.isDay, r2, g2, b2);
+    weatherTempToRgb(geoController.weather.temperature, r1, g1, b1);
+    humidityToRgb(geoController.weather.humidity, r0, g0, b0);
+    ledController.showWeatherColors(r0, g0, b0, r1, g1, b1, r2, g2, b2);
 }
 
 // ─── Command processing (shared between WebSocket and MQTT) ──────────────────

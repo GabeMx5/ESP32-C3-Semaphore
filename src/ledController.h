@@ -389,6 +389,24 @@ public:
         strip.show();
     }
 
+    // r0/g0/b0 = bottom LED, r1/g1/b1 = middle, r2/g2/b2 = top
+    void showWeatherColors(uint8_t r0, uint8_t g0, uint8_t b0,
+                           uint8_t r1, uint8_t g1, uint8_t b1,
+                           uint8_t r2, uint8_t g2, uint8_t b2,
+                           unsigned long durationMs = 5000)
+    {
+        cycleEnabled       = false;
+        partyEnabled       = false;
+        rainbowEnabled     = false;
+        randomYNState      = RandomYNState::IDLE;
+        showColorRunning   = true;
+        showColorRestoreAt = millis() + durationMs;
+        strip.setPixelColor(0, strip.Color(r0, g0, b0));
+        strip.setPixelColor(1, strip.Color(r1, g1, b1));
+        strip.setPixelColor(2, strip.Color(r2, g2, b2));
+        strip.show();
+    }
+
     void startRandomYesNo()
     {
         cycleEnabled   = false;
