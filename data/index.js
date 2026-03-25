@@ -1236,6 +1236,7 @@ function onOtaStatus(step) {
     setTimeout(() => {
       document.getElementById("ota-reconnect-msg").style.display = "block";
     }, 1000);
+    setTimeout(() => location.reload(), 10000);
   }
 }
 
