@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.0"
+#define FIRMWARE_VERSION "0.5"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -15,6 +15,7 @@
 #include "timerController.h"
 #include "configController.h"
 #include "geoController.h"
+#include "otaController.h"
 
 AsyncWebServer webServer(80);
 AsyncWebSocket ws("/ws");
@@ -26,6 +27,7 @@ MQTTController mqttController;
 TimerController timerController;
 ConfigController configController;
 GeoController    geoController;
+OTAController    otaController;
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -341,6 +343,10 @@ void processCommand(JsonDocument &doc)
         mqttController.publish("{\"type\":\"status\",\"status\":\"saved\",\"reboot\":true}");
         delay(1000);
         ESP.restart();
+    }
+    else if (strcmp(type, "startOTA") == 0)
+    {
+        otaController.start();
     }
     else if (strcmp(type, "getWifi") == 0)
     {
@@ -832,6 +838,15 @@ void setup()
         .onError([](ota_error_t error)
                  { Serial.printf("Error[%u]\n", error); });
     ArduinoOTA.begin();
+
+    otaController.onStatus = [](const char* step) {
+        JsonDocument doc;
+        doc["type"] = "otaStatus";
+        doc["step"] = step;
+        String msg;
+        serializeJson(doc, msg);
+        ws.textAll(msg);
+    };
 }
 
 void loop()

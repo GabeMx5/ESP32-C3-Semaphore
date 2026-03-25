@@ -35,13 +35,22 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32c3
 
-      - name: Rename artifact (dev)
-        if: github.ref == 'refs/heads/main'
-        run: cp .pio/build/esp32c3/firmware.bin .pio/build/esp32c3/firmware-dev.bin
+      - name: Build filesystem
+        run: pio run -t buildfs -e esp32c3
 
-      - name: Rename artifact (release)
+      - name: Prepare artifacts (dev)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cp .pio/build/esp32c3/firmware.bin   .pio/build/esp32c3/firmware-dev.bin
+          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem-dev.bin
+          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem.bin
+
+      - name: Prepare artifacts (release)
         if: startsWith(github.ref, 'refs/tags/v')
-        run: cp .pio/build/esp32c3/firmware.bin .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
+        run: |
+          cp .pio/build/esp32c3/firmware.bin   .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
+          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem-${{ github.ref_name }}.bin
+          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem.bin
 
       - name: Dev release (main push)
         if: github.ref == 'refs/heads/main'
@@ -50,13 +59,21 @@ jobs:
           tag_name: dev-latest
           name: Dev build
           prerelease: true
-          files: .pio/build/esp32c3/firmware-dev.bin
           make_latest: false
+          files: |
+            .pio/build/esp32c3/firmware-dev.bin
+            .pio/build/esp32c3/filesystem-dev.bin
+            .pio/build/esp32c3/firmware.bin
+            .pio/build/esp32c3/filesystem.bin
 
       - name: Stable release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          files: .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
           make_latest: true
+          files: |
+            .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
+            .pio/build/esp32c3/filesystem-${{ github.ref_name }}.bin
+            .pio/build/esp32c3/firmware.bin
+            .pio/build/esp32c3/filesystem.bin

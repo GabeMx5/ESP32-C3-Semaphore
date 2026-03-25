@@ -126,6 +126,8 @@ function connect() {
       if (data.latitude)  document.getElementById("latitude").value  = data.latitude;
       if (data.longitude) document.getElementById("longitude").value = data.longitude;
       updateLocationLabel();
+    } else if (data.type === "otaStatus") {
+      onOtaStatus(data.step);
     } else if (data.type === "status") {
       if (data.reboot) {
         document.getElementById("wifiSaveText").textContent = "Configuration saved. Rebooting...";
@@ -510,6 +512,10 @@ let lastSysInfo = null;
 function onSysInfo(data) {
   lastSysInfo = data;
   document.getElementById("infoVersion").textContent = data.version  ? `v${data.version}` : "—";
+  if (data.version && data.version !== _deviceVersion) {
+    _deviceVersion = data.version;
+    checkFirmwareUpdate();
+  }
   document.getElementById("infoIp").textContent     = data.ip       || "—";
   document.getElementById("infoSsid").textContent   = data.ssid     || "—";
   document.getElementById("infoRssi").textContent   = data.rssi != null ? `${data.rssi} dBm` : "—";
@@ -1124,3 +1130,121 @@ function saveTimers() {
 }
 
 if (localStorage.getItem("activeTab") === "timer") renderTimers();
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+function showToast(msg, type = "info") {
+  const el = document.getElementById("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle("error", type === "error");
+  el.classList.add("visible");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("visible"), 2500);
+}
+
+// ─── OTA Update ───────────────────────────────────────────────────────────────
+
+const OTA_STEP_ORDER = ["backup", "filesystem", "restore", "firmware"];
+const GITHUB_RELEASES_URL = "https://api.github.com/repos/GabeMx5/ESP32-C3-Semaphore/releases/latest";
+
+let _deviceVersion   = null;
+let _latestVersion   = null;
+
+const SVG_REFRESH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
+const SVG_UPLOAD  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`;
+
+function _isNewer(latest, current) {
+  const l = latest.replace(/^v/, '').split('.').map(Number);
+  const c = (current || '0').split('.').map(Number);
+  for (let i = 0; i < Math.max(l.length, c.length); i++) {
+    if ((l[i] || 0) > (c[i] || 0)) return true;
+    if ((l[i] || 0) < (c[i] || 0)) return false;
+  }
+  return false;
+}
+
+function _setUpdateBtn(state) {
+  const btn = document.getElementById("updateBtn");
+  const icon = document.getElementById("updateBtnIcon");
+  if (!btn || !icon) return;
+  btn.className = "location-btn" + (state === "checking" ? " checking" : state === "available" ? " update-available" : "");
+  btn.style.marginTop = "0";
+  btn.style.width  = "28px";
+  btn.style.height = "28px";
+  btn.title = state === "available" ? `Update to ${_latestVersion}` : "Check for updates";
+  icon.outerHTML = (state === "available" ? SVG_UPLOAD : SVG_REFRESH).replace('<svg ', '<svg id="updateBtnIcon" ');
+}
+
+function checkFirmwareUpdate(notify = false) {
+  if (!_deviceVersion) return;
+  _setUpdateBtn("checking");
+  fetch(GITHUB_RELEASES_URL)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(data => {
+      _latestVersion = data.tag_name || null;
+      if (_latestVersion && _isNewer(_latestVersion, _deviceVersion)) {
+        _setUpdateBtn("available");
+      } else {
+        _setUpdateBtn("upToDate");
+        if (notify) showToast(`v${_deviceVersion} is the latest version`);
+      }
+    })
+    .catch(() => {
+      _setUpdateBtn("upToDate");
+      showToast("Could not reach GitHub", "error");
+    });
+}
+
+function onUpdateBtnClick() {
+  const btn = document.getElementById("updateBtn");
+  if (btn && btn.classList.contains("update-available")) {
+    document.getElementById("ota-latest-label").textContent =
+      `Current: v${_deviceVersion}  →  Latest: ${_latestVersion}`;
+    document.getElementById("ota-phase-confirm").style.display  = "";
+    document.getElementById("ota-phase-progress").style.display = "none";
+    document.getElementById("ota-overlay").classList.add("visible");
+  } else {
+    checkFirmwareUpdate(true);
+  }
+}
+
+function confirmOTA() {
+  document.getElementById("ota-phase-confirm").style.display  = "none";
+  document.getElementById("ota-phase-progress").style.display = "";
+  OTA_STEP_ORDER.forEach(s => {
+    const el = document.getElementById(`ota-step-${s}`);
+    if (el) el.className = "ota-step";
+  });
+  document.getElementById("ota-step-error").style.display = "none";
+  document.getElementById("ota-reconnect-msg").style.display = "none";
+  wsSend({ type: "startOTA" });
+}
+
+function closeOtaOverlay() {
+  document.getElementById("ota-overlay").classList.remove("visible");
+}
+
+function onOtaStatus(step) {
+  if (step === "error") {
+    OTA_STEP_ORDER.forEach(s => {
+      const el = document.getElementById(`ota-step-${s}`);
+      if (el) el.classList.remove("active");
+    });
+    document.getElementById("ota-step-error").style.display = "block";
+    return;
+  }
+  const idx = OTA_STEP_ORDER.indexOf(step);
+  OTA_STEP_ORDER.forEach((s, i) => {
+    const el = document.getElementById(`ota-step-${s}`);
+    if (!el) return;
+    if (i < idx)   el.className = "ota-step done";
+    if (i === idx) el.className = "ota-step active";
+    if (i > idx)   el.className = "ota-step";
+  });
+  if (step === "firmware") {
+    setTimeout(() => {
+      document.getElementById("ota-reconnect-msg").style.display = "block";
+    }, 1000);
+  }
+}
