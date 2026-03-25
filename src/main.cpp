@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.6"
+#define FIRMWARE_VERSION "0.6.1"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -346,7 +346,10 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "startOTA") == 0)
     {
-        otaController.start();
+        xTaskCreate([](void*) {
+            otaController.start();
+            vTaskDelete(NULL);
+        }, "ota", 8192, NULL, 1, NULL);
     }
     else if (strcmp(type, "getWifi") == 0)
     {
