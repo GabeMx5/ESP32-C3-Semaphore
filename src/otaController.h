@@ -62,11 +62,13 @@ private:
 
     bool _flashFs()
     {
+        LittleFS.end();
         WiFiClientSecure client;
         client.setInsecure();
         httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
         t_httpUpdate_return ret = httpUpdate.updateSpiffs(client, OTA_FS_URL);
         Serial.printf("[OTA] FS result: %d — %s\n", ret, httpUpdate.getLastErrorString().c_str());
+        LittleFS.begin();
         return ret == HTTP_UPDATE_OK;
     }
 
