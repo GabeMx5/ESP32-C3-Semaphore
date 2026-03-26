@@ -100,9 +100,11 @@ jobs:
           cp $BUILD/firmware.bin   docs/firmware.bin
           cp $BUILD/filesystem.bin docs/filesystem.bin
           cp installer/index.html  docs/index.html
-          cat > docs/manifest.json << 'EOF'
+          VERSION="${{ github.ref_name }}"
+          cat > docs/manifest.json << EOF
           {
             "name": "ESP32-C3 Semaphore",
+            "version": "${VERSION#v}",
             "builds": [
               {
                 "chipFamily": "ESP32-C3",

@@ -89,26 +89,32 @@
       margin-top: 32px;
       font-size: 0.75rem;
       color: #484f58;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
+      text-align: center;
     }
 
     footer a {
-      color: #58a6ff;
+      color: #b1ff42;
       text-decoration: none;
     }
 
-    .footer-logo {
-      height: 32px;
-      width: auto;
-      opacity: 0.5;
-      transition: opacity 0.15s;
+    .install-btn {
+      transition: background-color 0.15s, color 0.15s;
     }
 
-    .footer-logo:hover {
-      opacity: 1;
+    @media (hover: hover) {
+      .install-btn:hover {
+        background-color: rgba(177,255,66,0.15) !important;
+        color: #b1ff42 !important;
+      }
+    }
+
+    .footer-tagline {
+      color: #484f58;
+      transition: color 0.15s;
+    }
+
+    footer a:hover .footer-tagline {
+      color: #e6edf3;
     }
   </style>
 </head>
@@ -127,7 +133,7 @@
     </div>
 
     <esp-web-install-button manifest="manifest.json">
-      <button slot="activate" style="
+      <button slot="activate" class="install-btn" style="
         background: #b1ff42;
         color: #0d1117;
         border: none;
@@ -138,30 +144,33 @@
         cursor: pointer;
         width: 100%;
         margin-bottom: 24px;
-      ">⚡ Install</button>
+      "><span id="installBtnText">Install</span></button>
     </esp-web-install-button>
 
     <script>
       if (!('serial' in navigator)) {
         document.getElementById('notSupported').style.display = 'block';
       }
+      fetch('manifest.json')
+        .then(r => r.json())
+        .then(m => {
+          if (m.version) document.getElementById('installBtnText').textContent = `Install v${m.version}`;
+        });
     </script>
 
     <div class="requirements">
       <strong>Requirements</strong>
-      Chrome or Edge on desktop (Web Serial API) ·
-      USB cable (data, not charge-only) ·
-      Seeed XIAO ESP32-C3
+      Chrome or Edge on desktop (Web Serial API)<br>
+      USB cable (data, not charge-only)<br>
+      ESP32-C3 OLED 0.42"
     </div>
   </div>
 
   <footer>
-    <div>
-      <a href="https://github.com/GabeMx5/ESP32-C3-Semaphore" target="_blank">GitHub</a>
-      &nbsp;·&nbsp;
-      Powered by <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
-    </div>
-    <img class="footer-logo" src="https://raw.githubusercontent.com/GabeMx5/ESP32-C3-Semaphore/main/data/dm-design-logo-nobg.svg" alt="DM Design">
+    <a href="https://makerworld.com/it/@mary83" target="_blank" style="display:inline-flex;align-items:center;gap:12px;text-decoration:none;cursor:pointer;">
+      <img style="height:40px;width:auto;display:block;" src="https://raw.githubusercontent.com/GabeMx5/ESP32-C3-Semaphore/main/data/dm-design-logo-nobg.svg" alt="DM Design">
+      <span class="footer-tagline" style="font-size:0.75rem;">Dream • Make • Repeat</span>
+    </a>
   </footer>
 
 </body>
