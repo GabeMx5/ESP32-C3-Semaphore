@@ -726,14 +726,18 @@ void setup()
 {
     Serial.begin(115200);
     delay(200);
-    monitorController.begin();
-    monitorController.displayMessage("Startup...");
-    monitorController.displayMessage("Connecting to\nWiFi...");
     if (!LittleFS.begin(true))
     {
         Serial.println("LittleFS mount failed");
         return;
     }
+    // Improv must run before any other Serial output to avoid confusing ESP Web Tools
+    if (!LittleFS.exists("/wifi.json"))
+        runImprovSetup(FIRMWARE_VERSION);
+
+    monitorController.begin();
+    monitorController.displayMessage("Startup...");
+    monitorController.displayMessage("Connecting to\nWiFi...");
     ledController.begin();
     configController.begin(ledController);
     timerController.begin();
@@ -821,9 +825,6 @@ void setup()
         ws.textAll(msg);
         broadcastLedStatus();
     };
-    if (!LittleFS.exists("/wifi.json"))
-        runImprovSetup(FIRMWARE_VERSION); // blocks until credentials saved + reboot
-
     networkManager.begin(wifiManager);
     geoController.begin(configController.getLatitude(), configController.getLongitude());
     configTzTime(wifiManager.timezone.c_str(), wifiManager.ntpServer.c_str());
