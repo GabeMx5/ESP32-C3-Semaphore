@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32-C3 Semaphore — Installer</title>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 24px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    esp-web-install-button {
+      --esp-tools-button-color: #b1ff42;
+      --esp-tools-button-text-color: #0d1117;
+      margin-bottom: 24px;
+      display: block;
+    }
+
+    .requirements {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: left;
+      font-size: 0.8rem;
+      color: #8b949e;
+      line-height: 1.8;
+    }
+
+    .requirements strong {
+      color: #e6edf3;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .not-supported {
+      background: #1f1318;
+      border: 1px solid #f4533640;
+      border-radius: 8px;
+      padding: 16px;
+      color: #f45336;
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    footer {
+      margin-top: 32px;
+      font-size: 0.75rem;
+      color: #484f58;
+    }
+
+    footer a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <img class="logo" src="https://raw.githubusercontent.com/GabeMx5/ESP32-C3-Semaphore/main/data/semaphore-logo.svg" alt="Semaphore logo">
+    <h1>ESP32-C3 Semaphore</h1>
+    <p class="subtitle">Connect your device via USB and click Install to flash the latest firmware directly from your browser.</p>
+
+    <div class="not-supported" id="notSupported">
+      Your browser does not support Web Serial.<br>
+      Please use <strong>Chrome</strong> or <strong>Edge</strong> on desktop.
+    </div>
+
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate" style="
+        background: #b1ff42;
+        color: #0d1117;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 28px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 24px;
+      ">⚡ Install</button>
+      <span slot="unsupported">
+        <script>document.getElementById('notSupported').style.display='block';</script>
+      </span>
+    </esp-web-install-button>
+
+    <div class="requirements">
+      <strong>Requirements</strong>
+      Chrome or Edge on desktop (Web Serial API) ·
+      USB cable (data, not charge-only) ·
+      Seeed XIAO ESP32-C3
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/GabeMx5/ESP32-C3-Semaphore" target="_blank">GitHub</a>
+    &nbsp;·&nbsp;
+    Powered by <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
+  </footer>
+
+</body>
+</html>

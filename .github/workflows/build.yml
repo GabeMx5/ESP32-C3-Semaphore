@@ -10,6 +10,8 @@ env:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -41,16 +43,22 @@ jobs:
       - name: Prepare artifacts (dev)
         if: github.ref == 'refs/heads/main'
         run: |
-          cp .pio/build/esp32c3/firmware.bin   .pio/build/esp32c3/firmware-dev.bin
-          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem-dev.bin
-          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem.bin
+          BUILD=.pio/build/esp32c3
+          cp $BUILD/firmware.bin   $BUILD/firmware-dev.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem-dev.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
+          cp $BUILD/bootloader.bin $BUILD/bootloader.bin
+          cp $BUILD/partitions.bin $BUILD/partitions.bin
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin $BUILD/boot_app0.bin
 
       - name: Prepare artifacts (release)
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          cp .pio/build/esp32c3/firmware.bin   .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
-          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem-${{ github.ref_name }}.bin
-          cp .pio/build/esp32c3/littlefs.bin   .pio/build/esp32c3/filesystem.bin
+          BUILD=.pio/build/esp32c3
+          cp $BUILD/firmware.bin   $BUILD/firmware-${{ github.ref_name }}.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem-${{ github.ref_name }}.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin $BUILD/boot_app0.bin
 
       - name: Dev release (main push)
         if: github.ref == 'refs/heads/main'
@@ -65,6 +73,9 @@ jobs:
             .pio/build/esp32c3/filesystem-dev.bin
             .pio/build/esp32c3/firmware.bin
             .pio/build/esp32c3/filesystem.bin
+            .pio/build/esp32c3/bootloader.bin
+            .pio/build/esp32c3/partitions.bin
+            .pio/build/esp32c3/boot_app0.bin
 
       - name: Stable release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -77,3 +88,49 @@ jobs:
             .pio/build/esp32c3/filesystem-${{ github.ref_name }}.bin
             .pio/build/esp32c3/firmware.bin
             .pio/build/esp32c3/filesystem.bin
+            .pio/build/esp32c3/bootloader.bin
+            .pio/build/esp32c3/partitions.bin
+            .pio/build/esp32c3/boot_app0.bin
+
+      - name: Build GitHub Pages
+        run: |
+          mkdir -p docs
+          LATEST_TAG="${{ github.ref_name }}"
+          BASE="https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/latest/download"
+          cat > docs/manifest.json << EOF
+          {
+            "name": "ESP32-C3 Semaphore",
+            "builds": [
+              {
+                "chipFamily": "ESP32-C3",
+                "parts": [
+                  { "path": "$BASE/bootloader.bin", "offset": 0 },
+                  { "path": "$BASE/partitions.bin",  "offset": 32768 },
+                  { "path": "$BASE/boot_app0.bin",   "offset": 57344 },
+                  { "path": "$BASE/firmware.bin",    "offset": 65536 },
+                  { "path": "$BASE/filesystem.bin",  "offset": 2686976 }
+                ]
+              }
+            ]
+          }
+          EOF
+          cp docs/manifest.json docs/manifest.json
+
+      - name: Copy installer page
+        run: cp installer/index.html docs/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  deploy-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
