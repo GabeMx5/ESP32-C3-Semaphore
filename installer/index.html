@@ -104,8 +104,11 @@
     <p class="subtitle">Connect your device via USB and click Install to flash the latest firmware directly from your browser.</p>
 
     <div class="not-supported" id="notSupported">
-      Your browser does not support Web Serial.<br>
-      Please use <strong>Chrome</strong> or <strong>Edge</strong> on desktop.
+      Web Serial API not available in this browser.<br><br>
+      <strong>Chrome / Edge:</strong> supported natively.<br>
+      <strong>Brave:</strong> enable via
+      <code style="background:#2d1f1f;padding:2px 6px;border-radius:4px;font-size:0.8rem;">brave://flags/#enable-experimental-web-platform-features</code><br><br>
+      Safari and Firefox are not supported.
     </div>
 
     <esp-web-install-button manifest="manifest.json">
@@ -121,10 +124,13 @@
         width: 100%;
         margin-bottom: 24px;
       ">⚡ Install</button>
-      <span slot="unsupported">
-        <script>document.getElementById('notSupported').style.display='block';</script>
-      </span>
     </esp-web-install-button>
+
+    <script>
+      if (!('serial' in navigator)) {
+        document.getElementById('notSupported').style.display = 'block';
+      }
+    </script>
 
     <div class="requirements">
       <strong>Requirements</strong>
