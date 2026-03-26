@@ -114,8 +114,6 @@ jobs:
             ]
           }
           EOF
-          cp docs/manifest.json docs/manifest.json
-
       - name: Copy installer page
         run: cp installer/index.html docs/index.html
 
