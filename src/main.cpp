@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.6.6"
+#define FIRMWARE_VERSION "0.7.0"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -16,6 +16,7 @@
 #include "configController.h"
 #include "geoController.h"
 #include "otaController.h"
+#include "improvController.h"
 
 AsyncWebServer webServer(80);
 AsyncWebSocket ws("/ws");
@@ -820,6 +821,9 @@ void setup()
         ws.textAll(msg);
         broadcastLedStatus();
     };
+    if (!LittleFS.exists("/wifi.json"))
+        runImprovSetup(FIRMWARE_VERSION); // blocks until credentials saved + reboot
+
     networkManager.begin(wifiManager);
     geoController.begin(configController.getLatitude(), configController.getLongitude());
     configTzTime(wifiManager.timezone.c_str(), wifiManager.ntpServer.c_str());
