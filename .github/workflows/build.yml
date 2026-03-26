@@ -47,8 +47,6 @@ jobs:
           cp $BUILD/firmware.bin   $BUILD/firmware-dev.bin
           cp $BUILD/littlefs.bin   $BUILD/filesystem-dev.bin
           cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
-          cp $BUILD/bootloader.bin $BUILD/bootloader.bin
-          cp $BUILD/partitions.bin $BUILD/partitions.bin
           cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin $BUILD/boot_app0.bin
 
       - name: Prepare artifacts (release)
