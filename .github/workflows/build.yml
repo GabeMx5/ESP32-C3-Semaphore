@@ -91,6 +91,7 @@ jobs:
             .pio/build/esp32c3/boot_app0.bin
 
       - name: Build GitHub Pages
+        if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p docs
           BUILD=.pio/build/esp32c3
@@ -121,12 +122,14 @@ jobs:
           EOF
 
       - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/
 
   deploy-pages:
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
