@@ -51,7 +51,7 @@ namespace Improv {
 
 // Blocks until WiFi credentials are received, device connects,
 // saves wifi.json and reboots. Never returns on success.
-inline void runImprovSetup(const char* /*firmwareVersion*/)
+inline void runImprovSetup(const char* firmwareVersion)
 {
     Serial.println("[Improv] No WiFi config — entering Improv setup");
     Improv::sendState(Serial, Improv::AUTHORIZED);
@@ -100,6 +100,34 @@ inline void runImprovSetup(const char* /*firmwareVersion*/)
             uint8_t* data = buf + 9;
 
             if (type != (uint8_t)Improv::RPC_COMMAND) continue;
+
+            // GET_CURRENT_STATE (0x02): reply with current state
+            if (data[0] == 0x02) {
+                uint8_t res[3] = { 0x02, 0x01, (uint8_t)Improv::AUTHORIZED };
+                Improv::sendPacket(Serial, Improv::RPC_RESULT, res, 3);
+                continue;
+            }
+
+            // GET_DEVICE_INFO (0x03): reply with firmware/hardware info
+            if (data[0] == 0x03) {
+                const char* fwName  = "ESP32-C3 Semaphore";
+                const char* fwVer   = firmwareVersion ? firmwareVersion : "unknown";
+                const char* hwName  = "Seeed XIAO ESP32-C3";
+                const char* chip    = "ESP32-C3";
+                uint8_t n1 = strlen(fwName), n2 = strlen(fwVer),
+                        n3 = strlen(hwName),  n4 = strlen(chip);
+                uint8_t total = n1 + n2 + n3 + n4 + 4; // +4 length bytes
+                uint8_t res[2 + total];
+                res[0] = 0x03; res[1] = total;
+                int p = 2;
+                res[p++] = n1; memcpy(res+p, fwName, n1);  p += n1;
+                res[p++] = n2; memcpy(res+p, fwVer,  n2);  p += n2;
+                res[p++] = n3; memcpy(res+p, hwName,  n3); p += n3;
+                res[p++] = n4; memcpy(res+p, chip,    n4);
+                Improv::sendPacket(Serial, Improv::RPC_RESULT, res, 2 + total);
+                continue;
+            }
+
             if (data[0] != (uint8_t)Improv::SEND_WIFI_SETTINGS) continue;
 
             // data: [cmd][sub_len][ssid_len][ssid...][pwd_len][pwd...]
