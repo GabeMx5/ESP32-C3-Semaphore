@@ -81,7 +81,7 @@ public:
         IPAddress subnet(255, 255, 255, 0);
 
         WiFi.softAPConfig(apIP, gateway, subnet);
-        WiFi.softAP("ESP32S3_Config");
+        WiFi.softAP("Semaphore");
 
         Serial.print("AP IP address: ");
         Serial.println(WiFi.softAPIP());
