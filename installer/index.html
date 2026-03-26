@@ -154,7 +154,7 @@
       fetch('manifest.json')
         .then(r => r.json())
         .then(m => {
-          if (m.version) document.getElementById('installBtnText').textContent = `Install v${m.version}`;
+          if (m.version && m.version !== 'main') document.getElementById('installBtnText').textContent = `Install v${m.version}`;
         });
     </script>
 
