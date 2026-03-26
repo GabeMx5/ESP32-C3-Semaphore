@@ -101,7 +101,7 @@ jobs:
           cp $BUILD/firmware.bin   docs/firmware.bin
           cp $BUILD/filesystem.bin docs/filesystem.bin
           cp installer/index.html  docs/index.html
-          VERSION="${{ github.ref_name }}"
+          VERSION=$(grep -oP '(?<=#define FIRMWARE_VERSION ")[^"]+' src/main.cpp)
           cat > docs/manifest.json << EOF
           {
             "name": "ESP32-C3 Semaphore",
