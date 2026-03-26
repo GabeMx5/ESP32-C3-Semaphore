@@ -6,6 +6,16 @@ A smart RGB traffic light based on the **Seeed XIAO ESP32-C3**, controllable via
 
 ---
 
+## Web Installer
+
+Flash the firmware directly from the browser (Chrome / Edge) — no tools required:
+
+**[https://gabemx5.github.io/ESP32-C3-Semaphore/](https://gabemx5.github.io/ESP32-C3-Semaphore/)**
+
+After flashing, a Wi-Fi setup wizard (Improv Serial) will guide you through connecting the device to your network.
+
+---
+
 ## Hardware
 
 | Component | Detail |
@@ -51,7 +61,7 @@ The **Weather Color** effect maps live data to the three LEDs:
 | Middle (LED 1) | Temperature | Blue = 5 °C → Red = 30 °C (linear HSV) |
 | Bottom (LED 0) | Humidity | Yellow = 0% → Green = 50% → Blue = 100% |
 
-Location is configurable from the Info tab via an interactive map overlay.
+Location is configurable from the Info tab via an interactive map overlay: tap anywhere on the map to set coordinates, which are saved to the device and used for all subsequent weather fetches.
 
 ### Timers
 - Up to 50 timers with weekly scheduling (Monday–Sunday)
@@ -60,10 +70,13 @@ Location is configurable from the Info tab via an interactive map overlay.
 - Execution based on RTC via NTP
 
 ### Connectivity
-- **WiFi** STA with DHCP or static IP; fallback to AP mode (`192.168.4.1`) after 3 failed attempts
+- **WiFi** STA with DHCP or static IP; fallback to AP mode (`192.168.4.1`) after 3 failed attempts (3-minute timeout, then auto-restart)
+- **Improv Wi-Fi Serial** first-boot wizard: after flashing, configure WiFi credentials directly from the browser via the web installer
 - **mDNS** with configurable hostname (default `semaphore.local`)
 - **WebSocket** real-time with application-level ping/pong (3 s interval, 2 s timeout)
-- **OTA** (ArduinoOTA) for wireless firmware updates
+- **OTA** (ArduinoOTA) for wireless firmware updates from PlatformIO
+- **Firmware update from web UI**: the INFO tab allows updating firmware and filesystem directly from the latest GitHub release, with automatic config backup/restore
+- **HTTP POST `/cmd`**: accepts the same JSON commands as WebSocket, useful for scripting or external integrations
 - **MQTT** optional with Home Assistant auto-discovery support
 
 ### OLED Display
@@ -124,6 +137,7 @@ Includes:
 - **Make changes persistent** toggle: when disabled, LED and effect changes are not written to flash (useful for temporary configurations)
 - **Backup** button: downloads a `semaphore-backup.json` file containing `config.json`, `wifi.json` and `mqtt.json`
 - **Restore** button: uploads a backup file and automatically reboots the device to apply changes
+- **Firmware update** button: fetches the latest release from GitHub and flashes firmware + filesystem OTA, with automatic config backup and restore
 
 ---
 
@@ -210,6 +224,7 @@ pio run --target uploadfs
 - `ArduinoJson`
 - `U8g2`
 - `PubSubClient`
+- `Improv-WiFi-Library`
 
 ---
 
@@ -225,7 +240,9 @@ pio run --target uploadfs
 │   ├── configController.h    # Load/save config.json, dirty flag
 │   ├── wifiConfigManager.h   # Network configuration persistence
 │   ├── geoController.h       # Weather API (Open-Meteo) and location
-│   └── monitorController.h   # OLED display
+│   ├── monitorController.h   # OLED display
+│   ├── otaController.h       # Firmware + filesystem update from GitHub
+│   └── improvController.h    # Improv Wi-Fi Serial first-boot wizard
 └── data/                     # Web UI (LittleFS)
     ├── index.html
     ├── index.js
