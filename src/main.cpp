@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.13"
+#define FIRMWARE_VERSION "0.7.14"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -899,6 +899,7 @@ void loop()
     mqttController.loop();
     configController.loop();
     static unsigned long lastWeatherPublish = 0;
+    static unsigned long lastRssiPublish    = 0;
     geoController.loop();
     serialConsole.loop();
     if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
@@ -909,5 +910,10 @@ void loop()
             geoController.weather.humidity,
             conditionToString(geoController.weather.condition)
         );
+    }
+    if (millis() - lastRssiPublish >= 60000)
+    {
+        lastRssiPublish = millis();
+        mqttController.publishRssi(WiFi.RSSI());
     }
 }

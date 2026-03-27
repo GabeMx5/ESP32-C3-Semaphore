@@ -326,7 +326,39 @@ public:
             mqttClient.publish(discTopic.c_str(), payload.c_str(), true);
         }
 
+        // RSSI sensor
+        {
+            String uid        = clientId + "_rssi";
+            String discTopic  = "homeassistant/sensor/" + uid + "/config";
+            String stateTopic = topicPrefix + "/status/rssi";
+
+            JsonDocument doc;
+            doc["name"]                = "RSSI";
+            doc["unique_id"]           = uid;
+            doc["state_topic"]         = stateTopic;
+            doc["device_class"]        = "signal_strength";
+            doc["state_class"]         = "measurement";
+            doc["unit_of_measurement"] = "dBm";
+            doc["entity_category"]     = "diagnostic";
+
+            JsonObject dev        = doc["device"].to<JsonObject>();
+            dev["identifiers"][0] = clientId;
+            dev["name"]           = "Semaphore";
+            dev["model"]          = "ESP32-C3";
+
+            String payload;
+            serializeJson(doc, payload);
+            mqttClient.publish(discTopic.c_str(), payload.c_str(), true);
+        }
+
         Serial.println("MQTT: HA discovery published");
+    }
+
+    void publishRssi(int rssi)
+    {
+        if (!mqttClient.connected()) return;
+        mqttClient.publish((topicPrefix + "/status/rssi").c_str(),
+            String(rssi).c_str(), true);
     }
 
     void publishWeather(float temperature, float humidity, const String &condition)

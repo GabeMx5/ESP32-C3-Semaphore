@@ -189,7 +189,7 @@ The device automatically publishes discovery topics for Home Assistant:
 - **Lights**: state and color/brightness control for each LED
 - **Switches**: cycle, party, rainbow
 - **Buttons**: Random Yes/No, Weather Color
-- **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes
+- **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes; RSSI (dBm) — updated every 60 seconds
 
 Command topic: `{topicPrefix}/cmd` (JSON format, same protocol as WebSocket).
 
