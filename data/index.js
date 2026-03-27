@@ -57,6 +57,7 @@ function stopPing() {
 }
 
 let reloadPoller = null;
+let otaFirmwareFlashing = false;
 
 function startReloadPoller() {
   if (reloadPoller) return;
@@ -139,8 +140,12 @@ function connect() {
   });
 
   ws.addEventListener("close", () => {
-    console.warn(`WebSocket disconnected. Reconnecting in ${reconnectDelay / 1000}s...`);
     stopPing();
+    if (otaFirmwareFlashing) {
+      startReloadPoller();
+      return;
+    }
+    console.warn(`WebSocket disconnected. Reconnecting in ${reconnectDelay / 1000}s...`);
     showOverlay();
     setTimeout(connect, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
@@ -1245,8 +1250,8 @@ function onOtaStatus(step) {
     if (i > idx)   el.className = "ota-step";
   });
   if (step === "firmware") {
+    otaFirmwareFlashing = true;
     document.getElementById("ota-reconnect-msg").style.display = "block";
-    startReloadPoller();
   }
 }
 
