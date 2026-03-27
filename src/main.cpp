@@ -1,7 +1,8 @@
-#define FIRMWARE_VERSION "0.7.16"
+#define FIRMWARE_VERSION "0.7.17"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <esp_ota_ops.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
 #include <ArduinoJson.h>
@@ -868,6 +869,12 @@ void setup()
     ArduinoOTA.begin();
 
     serialConsole.begin();
+
+    // Mark firmware as valid — cancels automatic rollback.
+    // If setup() never reaches this point (crash, watchdog, panic),
+    // the bootloader will revert to the previous firmware on next boot.
+    esp_ota_mark_app_valid_cancel_rollback();
+    Serial.println("[OTA] Firmware validated — rollback cancelled");
 
     otaController.onStatus = [](const char* step) {
         JsonDocument doc;

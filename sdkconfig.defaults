@@ -1,0 +1,4 @@
+# Enable automatic OTA rollback:
+# if the firmware does not call esp_ota_mark_app_valid_cancel_rollback()
+# before the next reboot, the bootloader reverts to the previous firmware.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
