@@ -128,6 +128,8 @@ function connect() {
       updateLocationLabel();
     } else if (data.type === "otaStatus") {
       onOtaStatus(data.step);
+    } else if (data.type === "otaProgress") {
+      onOtaProgress(data.step, data.pct);
     } else if (data.type === "status") {
       if (data.reboot) {
         document.getElementById("wifiSaveText").textContent = "Configuration saved. Rebooting...";
@@ -1204,7 +1206,9 @@ function confirmOTA() {
   document.getElementById("ota-phase-progress").style.display = "";
   OTA_STEP_ORDER.forEach(s => {
     const el = document.getElementById(`ota-step-${s}`);
-    if (el) el.className = "ota-step";
+    if (!el) return;
+    el.className = "ota-step";
+    el.textContent = OTA_STEP_LABELS[s] || s;
   });
   document.getElementById("ota-step-error").style.display    = "none";
   document.getElementById("ota-reconnect-msg").style.display = "none";
@@ -1214,6 +1218,13 @@ function confirmOTA() {
 function closeOtaOverlay() {
   document.getElementById("ota-overlay").classList.remove("visible");
 }
+
+const OTA_STEP_LABELS = {
+  backup:     "Backing up config",
+  filesystem: "Updating filesystem",
+  restore:    "Restoring config",
+  firmware:   "Updating firmware",
+};
 
 function onOtaStatus(step) {
   if (step === "error") {
@@ -1228,16 +1239,21 @@ function onOtaStatus(step) {
   OTA_STEP_ORDER.forEach((s, i) => {
     const el = document.getElementById(`ota-step-${s}`);
     if (!el) return;
+    el.textContent = OTA_STEP_LABELS[s] || s;
     if (i < idx)   el.className = "ota-step done";
     if (i === idx) el.className = "ota-step active";
     if (i > idx)   el.className = "ota-step";
   });
   if (step === "firmware") {
-    setTimeout(() => {
-      document.getElementById("ota-reconnect-msg").style.display = "block";
-    }, 1000);
-    setTimeout(() => location.reload(), 10000);
+    document.getElementById("ota-reconnect-msg").style.display = "block";
+    startReloadPoller();
   }
+}
+
+function onOtaProgress(step, pct) {
+  const el = document.getElementById(`ota-step-${step}`);
+  if (!el || !el.classList.contains("active")) return;
+  el.textContent = `${OTA_STEP_LABELS[step] || step} ${pct}%`;
 }
 
 function showToast(msg, type = "info") {

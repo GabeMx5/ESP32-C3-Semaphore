@@ -15,7 +15,8 @@ static const char* OTA_PATHS[] = { "/config.json", "/wifi.json", "/mqtt.json", "
 
 class OTAController {
 public:
-    std::function<void(const char*)> onStatus;
+    std::function<void(const char*)>       onStatus;
+    std::function<void(const char*, int)>  onProgress;
 
     void start()
     {
@@ -66,6 +67,9 @@ private:
         WiFiClientSecure client;
         client.setInsecure();
         httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+        httpUpdate.onProgress([this](int cur, int total) {
+            if (onProgress && total > 0) onProgress("filesystem", cur * 100 / total);
+        });
         t_httpUpdate_return ret = httpUpdate.updateSpiffs(client, OTA_FS_URL);
         Serial.printf("[OTA] FS result: %d — %s\n", ret, httpUpdate.getLastErrorString().c_str());
         LittleFS.begin();
@@ -95,6 +99,9 @@ private:
         WiFiClientSecure client;
         client.setInsecure();
         httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+        httpUpdate.onProgress([this](int cur, int total) {
+            if (onProgress && total > 0) onProgress("firmware", cur * 100 / total);
+        });
         httpUpdate.update(client, OTA_FW_URL);
         // auto-restart on success
     }

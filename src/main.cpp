@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.3"
+#define FIRMWARE_VERSION "0.7.4"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -865,6 +865,15 @@ void setup()
         JsonDocument doc;
         doc["type"] = "otaStatus";
         doc["step"] = step;
+        String msg;
+        serializeJson(doc, msg);
+        ws.textAll(msg);
+    };
+    otaController.onProgress = [](const char* step, int pct) {
+        JsonDocument doc;
+        doc["type"] = "otaProgress";
+        doc["step"] = step;
+        doc["pct"]  = pct;
         String msg;
         serializeJson(doc, msg);
         ws.textAll(msg);
