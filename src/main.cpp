@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.17"
+#define FIRMWARE_VERSION "0.7.18"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
