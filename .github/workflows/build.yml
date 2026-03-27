@@ -37,6 +37,9 @@ jobs:
       - name: Build firmware (installer variant, with Improv)
         run: pio run -e esp32c3_installer
 
+      - name: Compress web assets
+        run: python3 compress_web_standalone.py
+
       - name: Build filesystem
         run: pio run -t buildfs -e esp32c3_installer
 
