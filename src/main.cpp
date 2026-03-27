@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.6"
+#define FIRMWARE_VERSION "0.7.7"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -16,6 +16,7 @@
 #include "configController.h"
 #include "geoController.h"
 #include "otaController.h"
+#include "serialConsole.h"
 #ifdef IMPROV_ENABLED
 #include "improvController.h"
 #endif
@@ -31,6 +32,7 @@ TimerController timerController;
 ConfigController configController;
 GeoController    geoController;
 OTAController    otaController;
+SerialConsole    serialConsole(wifiManager, FIRMWARE_VERSION);
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -896,6 +898,7 @@ void loop()
     configController.loop();
     static unsigned long lastWeatherPublish = 0;
     geoController.loop();
+    serialConsole.loop();
     if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
     {
         lastWeatherPublish = geoController.weather.lastUpdate;
