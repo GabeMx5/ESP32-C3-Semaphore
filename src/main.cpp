@@ -1,6 +1,9 @@
-#define FIRMWARE_VERSION "0.7.20"
+#define FIRMWARE_VERSION "0.7.21"
 
 #include <WiFi.h>
+// forward declaration
+static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor,
+                         uint8_t& r, uint8_t& g, uint8_t& b);
 #include <ESPmDNS.h>
 #include <esp_ota_ops.h>
 #include <ESPAsyncWebServer.h>
@@ -227,7 +230,13 @@ void sendSysInfo(AsyncWebSocketClient *client)
         doc["aqPm25"]  = geoController.airQuality.pm2_5;
         doc["aqPm10"]  = geoController.airQuality.pm10;
         doc["aqNo2"]   = geoController.airQuality.no2;
-        doc["aqOzone"] = geoController.airQuality.ozone;
+        uint8_t aqr, aqg, aqb;
+        aqValueToRgb(geoController.airQuality.pm2_5, 12,  35,  55,  aqr, aqg, aqb);
+        doc["aqPm25R"] = aqr; doc["aqPm25G"] = aqg; doc["aqPm25B"] = aqb;
+        aqValueToRgb(geoController.airQuality.pm10,  20,  40,  140, aqr, aqg, aqb);
+        doc["aqPm10R"] = aqr; doc["aqPm10G"] = aqg; doc["aqPm10B"] = aqb;
+        aqValueToRgb(geoController.airQuality.no2,   40,  100, 200, aqr, aqg, aqb);
+        doc["aqNo2R"]  = aqr; doc["aqNo2G"]  = aqg; doc["aqNo2B"]  = aqb;
     }
     String response;
     serializeJson(doc, response);
@@ -961,8 +970,7 @@ void loop()
         mqttController.publishAirQuality(
             geoController.airQuality.pm2_5,
             geoController.airQuality.pm10,
-            geoController.airQuality.no2,
-            geoController.airQuality.ozone
+            geoController.airQuality.no2
         );
     }
     if (millis() - lastRssiPublish >= 60000)

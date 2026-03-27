@@ -571,10 +571,15 @@ function onSysInfo(data) {
     document.getElementById("infoPm25").textContent  = `${data.aqPm25.toFixed(1)} µg/m³`;
     document.getElementById("infoPm10").textContent  = `${data.aqPm10.toFixed(1)} µg/m³`;
     document.getElementById("infoNo2").textContent   = `${data.aqNo2.toFixed(1)} µg/m³`;
-    document.getElementById("infoOzone").textContent = `${data.aqOzone.toFixed(1)} µg/m³`;
+    document.getElementById("pm25Dot").style.background   = `rgb(${data.aqPm25R},${data.aqPm25G},${data.aqPm25B})`;
+    document.getElementById("pm10Dot").style.background   = `rgb(${data.aqPm10R},${data.aqPm10G},${data.aqPm10B})`;
+    document.getElementById("no2Dot").style.background    = `rgb(${data.aqNo2R},${data.aqNo2G},${data.aqNo2B})`;
   } else {
-    ["infoPm25","infoPm10","infoNo2","infoOzone"].forEach(id => {
+    ["infoPm25","infoPm10","infoNo2"].forEach(id => {
       document.getElementById(id).textContent = data.latitude ? "Fetching..." : "—";
+    });
+    ["pm25Dot","pm10Dot","no2Dot"].forEach(id => {
+      document.getElementById(id).style.background = "transparent";
     });
   }
 }

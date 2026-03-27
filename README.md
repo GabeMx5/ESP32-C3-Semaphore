@@ -175,6 +175,11 @@ Weather data is displayed when a location is configured:
 - **Temperature** — value in °C, with a colored dot from blue (cold) to red (hot)
 - **Humidity** — value in %, with a colored dot from yellow (dry) to blue (humid)
 
+Air quality data is also shown with AQI-colored dots:
+- **PM2.5** — value in µg/m³, with a colored dot (green/yellow/orange/red/purple)
+- **PM10** — value in µg/m³, with a colored dot (green/yellow/orange/red/purple)
+- **NO₂** — value in µg/m³, with a colored dot (green/yellow/orange/red/purple)
+
 All dot colors are computed by the firmware and sent via WebSocket.
 
 Includes:
@@ -191,7 +196,7 @@ The device automatically publishes discovery topics for Home Assistant:
 - **Lights**: state and color/brightness control for each LED
 - **Switches**: cycle, party, rainbow
 - **Buttons**: Random Yes/No, Weather Color
-- **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes; PM2.5, PM10, NO₂, ozone (µg/m³) — updated every 30 minutes; RSSI (dBm) — updated every 60 seconds
+- **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes; PM2.5, PM10, NO₂ (µg/m³) — updated every 30 minutes; RSSI (dBm) — updated every 60 seconds
 
 Command topic: `{topicPrefix}/cmd` (JSON format, same protocol as WebSocket).
 

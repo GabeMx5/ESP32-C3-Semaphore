@@ -331,7 +331,6 @@ public:
             {"PM2.5",  "pm2_5", "µg/m³"},
             {"PM10",   "pm10",  "µg/m³"},
             {"NO₂",    "no2",   "µg/m³"},
-            {"Ozone",  "ozone", "µg/m³"},
         };
         for (auto &s : aqSensors)
         {
@@ -345,7 +344,6 @@ public:
             doc["state_topic"]         = stateTopic;
             doc["state_class"]         = "measurement";
             doc["unit_of_measurement"] = s.unit;
-            doc["entity_category"]     = "diagnostic";
 
             JsonObject dev        = doc["device"].to<JsonObject>();
             dev["identifiers"][0] = clientId;
@@ -403,13 +401,12 @@ public:
         Serial.println("MQTT: HA discovery published");
     }
 
-    void publishAirQuality(float pm2_5, float pm10, float no2, float ozone)
+    void publishAirQuality(float pm2_5, float pm10, float no2)
     {
         if (!mqttClient.connected()) return;
         mqttClient.publish((topicPrefix + "/status/airquality/pm2_5").c_str(),  String(pm2_5,  1).c_str(), true);
         mqttClient.publish((topicPrefix + "/status/airquality/pm10").c_str(),   String(pm10,   1).c_str(), true);
         mqttClient.publish((topicPrefix + "/status/airquality/no2").c_str(),    String(no2,    1).c_str(), true);
-        mqttClient.publish((topicPrefix + "/status/airquality/ozone").c_str(),  String(ozone,  1).c_str(), true);
     }
 
     void publishRssi(int rssi)

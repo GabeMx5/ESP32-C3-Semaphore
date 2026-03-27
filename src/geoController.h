@@ -23,7 +23,6 @@ struct AirQualityData {
     float         pm2_5    = 0.0f;
     float         pm10     = 0.0f;
     float         no2      = 0.0f;
-    float         ozone    = 0.0f;
     bool          valid    = false;
     unsigned long lastUpdate = 0;
 };
@@ -132,7 +131,7 @@ private:
         String url = "https://air-quality-api.open-meteo.com/v1/air-quality"
                      "?latitude="  + String(_lat, 6) +
                      "&longitude=" + String(_lon, 6) +
-                     "&current=pm10,pm2_5,nitrogen_dioxide,ozone";
+                     "&current=pm10,pm2_5,nitrogen_dioxide";
 
         WiFiClientSecure client;
         client.setInsecure();
@@ -159,13 +158,12 @@ private:
         airQuality.pm2_5  = c["pm2_5"]             | 0.0f;
         airQuality.pm10   = c["pm10"]               | 0.0f;
         airQuality.no2    = c["nitrogen_dioxide"]   | 0.0f;
-        airQuality.ozone  = c["ozone"]              | 0.0f;
         airQuality.valid  = true;
         airQuality.lastUpdate = millis();
         _lastAirFetch         = millis();
 
-        Serial.printf("[AQ] Updated: PM2.5=%.1f PM10=%.1f NO2=%.1f O3=%.1f\n",
-                      airQuality.pm2_5, airQuality.pm10, airQuality.no2, airQuality.ozone);
+        Serial.printf("[AQ] Updated: PM2.5=%.1f PM10=%.1f NO2=%.1f\n",
+                      airQuality.pm2_5, airQuality.pm10, airQuality.no2);
     }
 
     static WeatherCondition mapCondition(int code)

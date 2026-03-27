@@ -202,15 +202,15 @@
           Guess
         </button>
       </div>
-      <div class="option-row action-row">
-        <button id="weatherBtn" class="action-btn">
+      <div style="display:flex;gap:10px;margin-top:10px;margin-bottom:9px;">
+        <button id="weatherBtn" class="action-btn" style="flex:1;margin:0;">
           <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
             <circle cx="12" cy="12" r="4"/>
           </svg>
           Weather
         </button>
-        <button id="airQualityBtn" class="action-btn">
+        <button id="airQualityBtn" class="action-btn" style="flex:1;margin:0;">
           <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0"/>
             <path d="M12 8v4l3 3"/>
@@ -423,10 +423,9 @@
       <div class="info-row"><span class="info-label">Weather</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoWeather">—</span><span id="conditionDot" class="weather-dot"></span></span></div>
       <div class="info-row"><span class="info-label">Temperature</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoWeatherTemp">—</span><span id="weatherDot" class="weather-dot"></span></span></div>
       <div class="info-row"><span class="info-label">Humidity</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoWeatherHumidity">—</span><span id="humidityDot" class="weather-dot"></span></span></div>
-      <div class="info-row"><span class="info-label">PM2.5</span><span class="info-value"><span id="infoPm25">—</span></span></div>
-      <div class="info-row"><span class="info-label">PM10</span><span class="info-value"><span id="infoPm10">—</span></span></div>
-      <div class="info-row"><span class="info-label">NO₂</span><span class="info-value"><span id="infoNo2">—</span></span></div>
-      <div class="info-row"><span class="info-label">Ozone</span><span class="info-value"><span id="infoOzone">—</span></span></div>
+      <div class="info-row"><span class="info-label">PM2.5</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoPm25">—</span><span id="pm25Dot" class="weather-dot"></span></span></div>
+      <div class="info-row"><span class="info-label">PM10</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoPm10">—</span><span id="pm10Dot" class="weather-dot"></span></span></div>
+      <div class="info-row"><span class="info-label">NO₂</span><span class="info-value" style="display:flex;align-items:center;gap:8px;"><span id="infoNo2">—</span><span id="no2Dot" class="weather-dot"></span></span></div>
       <div style="display:flex;gap:10px;margin-top:20px;">
         <button class="save-btn" style="flex:1;margin:0;" onclick="backupConfig()">
           <svg class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
