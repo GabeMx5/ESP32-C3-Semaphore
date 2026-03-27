@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.7"
+#define FIRMWARE_VERSION "0.7.9"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -32,7 +32,7 @@ TimerController timerController;
 ConfigController configController;
 GeoController    geoController;
 OTAController    otaController;
-SerialConsole    serialConsole(wifiManager, FIRMWARE_VERSION);
+SerialConsole    serialConsole(wifiManager, mqttController, FIRMWARE_VERSION);
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -866,6 +866,8 @@ void setup()
         .onError([](ota_error_t error)
                  { Serial.printf("Error[%u]\n", error); });
     ArduinoOTA.begin();
+
+    serialConsole.begin();
 
     otaController.onStatus = [](const char* step) {
         JsonDocument doc;

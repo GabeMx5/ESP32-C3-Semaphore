@@ -81,7 +81,16 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 
 ### Serial Console
 
-Available commands via serial monitor (115200 baud):
+Interactive REPL over USB serial (115200 baud). Follows Tasmota conventions: characters are echoed as you type, backspace works, each command is shown with a `CMD:` prefix and each response line with `RST:`.
+
+```
+> status
+CMD: status
+RST: Version  : 0.7.9
+RST: IP       : 192.168.1.42
+...
+>
+```
 
 | Command | Description |
 |---|---|
@@ -93,10 +102,24 @@ Available commands via serial monitor (115200 baud):
 | `ssid <value>` | Set WiFi SSID (saved, requires reboot) |
 | `password <value>` | Set WiFi password (saved, requires reboot) |
 | `hostname <value>` | Set mDNS hostname (saved, requires reboot) |
+| `dhcp` | Show DHCP mode (on/off) |
+| `dhcp on\|off` | Enable/disable DHCP (requires reboot) |
+| `staticip <value>` | Set static IP address (requires reboot) |
+| `subnet <value>` | Set subnet mask (requires reboot) |
+| `gateway <value>` | Set default gateway (requires reboot) |
+| `dns <value>` | Set DNS server (requires reboot) |
 | `rssi` | WiFi signal strength in dBm |
 | `heap` | Free heap memory |
 | `uptime` | Seconds since boot |
 | `reboot` | Restart the device |
+| `mqtt` | Show MQTT configuration and status |
+| `mqtt broker <value>` | Set MQTT broker hostname/IP |
+| `mqtt port <value>` | Set MQTT port |
+| `mqtt user <value>` | Set MQTT username |
+| `mqtt pass <value>` | Set MQTT password |
+| `mqtt clientid <value>` | Set MQTT client ID |
+| `mqtt topic <value>` | Set MQTT topic prefix |
+| `mqtt enable\|disable` | Enable/disable MQTT |
 
 ### OLED Display
 - Shows status messages at boot and operation feedback
