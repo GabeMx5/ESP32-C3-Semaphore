@@ -151,11 +151,13 @@
       if (!('serial' in navigator)) {
         document.getElementById('notSupported').style.display = 'block';
       }
-      fetch('manifest.json')
+      fetch('https://api.github.com/repos/GabeMx5/ESP32-C3-Semaphore/releases/latest', { cache: 'no-store' })
         .then(r => r.json())
-        .then(m => {
-          if (m.version && m.version !== 'main') document.getElementById('installBtnText').textContent = `Install v${m.version}`;
-        });
+        .then(r => {
+          const v = r.tag_name ? r.tag_name.replace(/^v/, '') : null;
+          if (v) document.getElementById('installBtnText').textContent = `Install v${v}`;
+        })
+        .catch(() => {});
     </script>
 
     <div class="requirements">
