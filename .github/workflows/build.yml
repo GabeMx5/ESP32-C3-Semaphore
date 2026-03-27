@@ -117,7 +117,7 @@ jobs:
                   { "path": "partitions.bin",  "offset": 32768 },
                   { "path": "boot_app0.bin",   "offset": 57344 },
                   { "path": "firmware.bin",    "offset": 65536 },
-                  { "path": "filesystem.bin",  "offset": 2686976 }
+                  { "path": "filesystem.bin",  "offset": 3866624 }
                 ]
               }
             ]
