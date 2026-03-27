@@ -94,7 +94,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p docs
-          BUILD=.pio/build/esp32c3
+          BUILD=.pio/build/esp32c3_installer
           cp $BUILD/bootloader.bin docs/bootloader.bin
           cp $BUILD/partitions.bin docs/partitions.bin
           cp $BUILD/boot_app0.bin  docs/boot_app0.bin
