@@ -269,15 +269,20 @@ public:
             mqttClient.publish(discTopic.c_str(), payload.c_str(), true);
         }
 
+        struct { const char *name; const char *id; const char *cmd; } buttons[] = {
+            {"Random Yes/No", "random_yn",     "{\"type\":\"randomYesNo\"}"},
+            {"Weather Color", "weather_color", "{\"type\":\"weatherColor\"}"},
+        };
+        for (auto &b : buttons)
         {
-            String uid   = clientId + "_random_yn";
+            String uid   = clientId + "_" + b.id;
             String topic = "homeassistant/button/" + uid + "/config";
 
             JsonDocument doc;
-            doc["name"]          = "Random Yes/No";
+            doc["name"]          = b.name;
             doc["unique_id"]     = uid;
             doc["command_topic"] = cmdTopic;
-            doc["payload_press"] = "{\"type\":\"randomYesNo\"}";
+            doc["payload_press"] = b.cmd;
 
             JsonObject dev        = doc["device"].to<JsonObject>();
             dev["identifiers"][0] = clientId;
@@ -289,7 +294,50 @@ public:
             mqttClient.publish(topic.c_str(), payload.c_str(), true);
         }
 
+        // Weather sensors
+        struct { const char *name; const char *id; const char *devClass; const char *unit; } wSensors[] = {
+            {"Temperature", "temperature", "temperature", "°C"},
+            {"Humidity",    "humidity",    "humidity",    "%"},
+            {"Condition",   "condition",   nullptr,       nullptr},
+        };
+        for (auto &s : wSensors)
+        {
+            String uid        = clientId + "_weather_" + s.id;
+            String discTopic  = "homeassistant/sensor/" + uid + "/config";
+            String stateTopic = topicPrefix + "/status/weather/" + s.id;
+
+            JsonDocument doc;
+            doc["name"]        = s.name;
+            doc["unique_id"]   = uid;
+            doc["state_topic"] = stateTopic;
+            if (s.devClass) {
+                doc["device_class"]   = s.devClass;
+                doc["state_class"]    = "measurement";
+            }
+            if (s.unit) doc["unit_of_measurement"] = s.unit;
+
+            JsonObject dev        = doc["device"].to<JsonObject>();
+            dev["identifiers"][0] = clientId;
+            dev["name"]           = "Semaphore";
+            dev["model"]          = "ESP32-C3";
+
+            String payload;
+            serializeJson(doc, payload);
+            mqttClient.publish(discTopic.c_str(), payload.c_str(), true);
+        }
+
         Serial.println("MQTT: HA discovery published");
+    }
+
+    void publishWeather(float temperature, float humidity, const String &condition)
+    {
+        if (!mqttClient.connected()) return;
+        mqttClient.publish((topicPrefix + "/status/weather/temperature").c_str(),
+            String(temperature, 1).c_str(), true);
+        mqttClient.publish((topicPrefix + "/status/weather/humidity").c_str(),
+            String((int)humidity).c_str(), true);
+        mqttClient.publish((topicPrefix + "/status/weather/condition").c_str(),
+            condition.c_str(), true);
     }
 
     void applyConfig(const String &newBroker, int newPort, const String &newUsername,

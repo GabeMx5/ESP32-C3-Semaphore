@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.2"
+#define FIRMWARE_VERSION "0.7.3"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -33,6 +33,20 @@ OTAController    otaController;
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
 void humidityToRgb(float humidity, uint8_t& r, uint8_t& g, uint8_t& b);
+
+static const char* conditionToString(WeatherCondition c)
+{
+    switch (c) {
+        case WeatherCondition::CLEAR:         return "Clear";
+        case WeatherCondition::PARTLY_CLOUDY: return "Partly Cloudy";
+        case WeatherCondition::FOGGY:         return "Foggy";
+        case WeatherCondition::DRIZZLE:       return "Drizzle";
+        case WeatherCondition::RAINY:         return "Rainy";
+        case WeatherCondition::SNOWY:         return "Snowy";
+        case WeatherCondition::STORMY:        return "Stormy";
+        default:                              return "Unknown";
+    }
+}
 
 // ─── Broadcast ────────────────────────────────────────────────────────────────
 
@@ -867,5 +881,15 @@ void loop()
     ws.cleanupClients();
     mqttController.loop();
     configController.loop();
+    static unsigned long lastWeatherPublish = 0;
     geoController.loop();
+    if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
+    {
+        lastWeatherPublish = geoController.weather.lastUpdate;
+        mqttController.publishWeather(
+            geoController.weather.temperature,
+            geoController.weather.humidity,
+            conditionToString(geoController.weather.condition)
+        );
+    }
 }
