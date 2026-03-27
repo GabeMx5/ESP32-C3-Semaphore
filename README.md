@@ -46,6 +46,7 @@ The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **b
 | **Guess** | Game: the user picks a LED, a 24-step 500 ms→50 ms animation runs, then the firmware reveals the winning LED |
 | **Morse Code** | Flashes all LEDs in Morse code for any text entered by the user (A–Z, spaces supported) |
 | **Weather Color** | Sets each LED to a color based on real-time weather data (see below) |
+| **Air Quality Color** | Sets each LED to a color based on real-time air quality data (PM2.5, PM10, NO₂) |
 
 Effects are mutually exclusive: enabling one automatically disables the others.
 
@@ -190,7 +191,7 @@ The device automatically publishes discovery topics for Home Assistant:
 - **Lights**: state and color/brightness control for each LED
 - **Switches**: cycle, party, rainbow
 - **Buttons**: Random Yes/No, Weather Color
-- **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes; RSSI (dBm) — updated every 60 seconds
+- **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes; PM2.5, PM10, NO₂, ozone (µg/m³) — updated every 30 minutes; RSSI (dBm) — updated every 60 seconds
 
 Command topic: `{topicPrefix}/cmd` (JSON format, same protocol as WebSocket).
 

@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.19"
+#define FIRMWARE_VERSION "0.7.20"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -223,6 +223,12 @@ void sendSysInfo(AsyncWebSocketClient *client)
         doc["humidityG"] = hg;
         doc["humidityB"] = hb;
     }
+    if (geoController.airQuality.valid) {
+        doc["aqPm25"]  = geoController.airQuality.pm2_5;
+        doc["aqPm10"]  = geoController.airQuality.pm10;
+        doc["aqNo2"]   = geoController.airQuality.no2;
+        doc["aqOzone"] = geoController.airQuality.ozone;
+    }
     String response;
     serializeJson(doc, response);
     client->text(response);
@@ -280,6 +286,30 @@ void humidityToRgb(float humidity, uint8_t& r, uint8_t& g, uint8_t& b)
         g = (uint8_t)(200 * (1.0f - t));
         b = (uint8_t)(80  * (1.0f - t) + 220 * t);
     }
+}
+
+// Maps a pollutant value to RGB using AQI-style thresholds:
+// good→green, moderate→yellow, poor→orange, very poor→red, hazardous→purple
+static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor,
+                          uint8_t& r, uint8_t& g, uint8_t& b)
+{
+    if (v < tGood)     { r=0;   g=200; b=0;   return; } // green
+    if (v < tModerate) { r=220; g=220; b=0;   return; } // yellow
+    if (v < tPoor)     { r=255; g=100; b=0;   return; } // orange
+    if (v < tPoor*2)   { r=255; g=0;   b=0;   return; } // red
+                         r=160; g=0;   b=160;            // purple
+}
+
+void applyAirQualityColor()
+{
+    if (!geoController.airQuality.valid) return;
+    uint8_t r2, g2, b2; // top    — PM2.5  (thresholds: 12 / 35 / 55)
+    uint8_t r1, g1, b1; // middle — PM10   (thresholds: 20 / 40 / 140)
+    uint8_t r0, g0, b0; // bottom — NO₂    (thresholds: 40 / 100 / 200)
+    aqValueToRgb(geoController.airQuality.pm2_5, 12,  35,  55,  r2, g2, b2);
+    aqValueToRgb(geoController.airQuality.pm10,  20,  40,  140, r1, g1, b1);
+    aqValueToRgb(geoController.airQuality.no2,   40,  100, 200, r0, g0, b0);
+    ledController.showWeatherColors(r0, g0, b0, r1, g1, b1, r2, g2, b2);
 }
 
 void applyWeatherColor()
@@ -446,6 +476,12 @@ void processCommand(JsonDocument &doc)
         Serial.printf("[weatherColor] valid=%d temp=%.1f\n",
                       geoController.weather.valid, geoController.weather.temperature);
         applyWeatherColor();
+    }
+    else if (strcmp(type, "airQualityColor") == 0)
+    {
+        Serial.printf("[airQualityColor] valid=%d pm2_5=%.1f\n",
+                      geoController.airQuality.valid, geoController.airQuality.pm2_5);
+        applyAirQualityColor();
     }
     else if (strcmp(type, "setLocation") == 0)
     {
@@ -905,8 +941,9 @@ void loop()
     ws.cleanupClients();
     mqttController.loop();
     configController.loop();
-    static unsigned long lastWeatherPublish = 0;
-    static unsigned long lastRssiPublish    = 0;
+    static unsigned long lastWeatherPublish  = 0;
+    static unsigned long lastAirQualPublish  = 0;
+    static unsigned long lastRssiPublish     = 0;
     geoController.loop();
     serialConsole.loop();
     if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
@@ -916,6 +953,16 @@ void loop()
             geoController.weather.temperature,
             geoController.weather.humidity,
             conditionToString(geoController.weather.condition)
+        );
+    }
+    if (geoController.airQuality.valid && geoController.airQuality.lastUpdate != lastAirQualPublish)
+    {
+        lastAirQualPublish = geoController.airQuality.lastUpdate;
+        mqttController.publishAirQuality(
+            geoController.airQuality.pm2_5,
+            geoController.airQuality.pm10,
+            geoController.airQuality.no2,
+            geoController.airQuality.ozone
         );
     }
     if (millis() - lastRssiPublish >= 60000)

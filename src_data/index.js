@@ -433,6 +433,10 @@ document.getElementById("weatherBtn").addEventListener("click", () => {
   wsSend({ type: "weatherColor" });
 });
 
+document.getElementById("airQualityBtn").addEventListener("click", () => {
+  wsSend({ type: "airQualityColor" });
+});
+
 document.getElementById("morseBtn").addEventListener("click", () => {
   document.getElementById("morse-overlay").classList.add("visible");
   const input = document.getElementById("morseText");
@@ -544,7 +548,8 @@ function onSysInfo(data) {
   document.getElementById("infoChip").textContent    = data.chipModel ? `${data.chipModel} rev${data.chipRevision}` : "—";
   document.getElementById("infoChannel").textContent = data.wifiChannel != null ? `${data.wifiChannel}` : "—";
   const conditionLabels = ["—", "Clear", "Partly cloudy", "Foggy", "Drizzle", "Rainy", "Snowy", "Stormy"];
-  document.getElementById("weatherBtn").disabled = data.weatherCode == null || !data.latitude;
+  document.getElementById("weatherBtn").disabled    = data.weatherCode == null || !data.latitude;
+  document.getElementById("airQualityBtn").disabled = data.aqPm25 == null || !data.latitude;
   if (data.weatherCode != null) {
     const cond = conditionLabels[data.weatherCondition] || "—";
     document.getElementById("infoWeather").textContent     = `${cond} (code ${data.weatherCode})`;
@@ -561,6 +566,16 @@ function onSysInfo(data) {
     document.getElementById("conditionDot").style.background = "transparent";
     document.getElementById("weatherDot").style.background   = "transparent";
     document.getElementById("humidityDot").style.background  = "transparent";
+  }
+  if (data.aqPm25 != null) {
+    document.getElementById("infoPm25").textContent  = `${data.aqPm25.toFixed(1)} µg/m³`;
+    document.getElementById("infoPm10").textContent  = `${data.aqPm10.toFixed(1)} µg/m³`;
+    document.getElementById("infoNo2").textContent   = `${data.aqNo2.toFixed(1)} µg/m³`;
+    document.getElementById("infoOzone").textContent = `${data.aqOzone.toFixed(1)} µg/m³`;
+  } else {
+    ["infoPm25","infoPm10","infoNo2","infoOzone"].forEach(id => {
+      document.getElementById(id).textContent = data.latitude ? "Fetching..." : "—";
+    });
   }
 }
 

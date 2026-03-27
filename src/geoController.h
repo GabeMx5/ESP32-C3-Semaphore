@@ -5,7 +5,8 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 
-#define GEO_UPDATE_INTERVAL_MS 1800000UL
+#define GEO_UPDATE_INTERVAL_MS  1800000UL
+#define GEO_AQ_INTERVAL_MS      1800000UL
 
 enum class WeatherCondition {
     UNKNOWN,
@@ -16,6 +17,15 @@ enum class WeatherCondition {
     RAINY,          // 61-67, 80-82 rain / showers
     SNOWY,          // 71-77, 85-86 snow
     STORMY          // 95,96,99 thunderstorm
+};
+
+struct AirQualityData {
+    float         pm2_5    = 0.0f;
+    float         pm10     = 0.0f;
+    float         no2      = 0.0f;
+    float         ozone    = 0.0f;
+    bool          valid    = false;
+    unsigned long lastUpdate = 0;
 };
 
 struct WeatherData {
@@ -31,7 +41,8 @@ struct WeatherData {
 class GeoController
 {
 public:
-    WeatherData weather;
+    WeatherData    weather;
+    AirQualityData airQuality;
 
     void begin(float lat, float lon)
     {
@@ -43,7 +54,8 @@ public:
     {
         _lat = lat;
         _lon = lon;
-        weather.valid = false;
+        weather.valid    = false;
+        airQuality.valid = false;
     }
 
     void loop()
@@ -51,14 +63,17 @@ public:
         if (_lat == 0.0f && _lon == 0.0f) return;
         if (WiFi.status() != WL_CONNECTED) return;
         if (millis() - _lastFetch < GEO_UPDATE_INTERVAL_MS && _lastFetch > 0) return;
-
         fetch();
+
+        if (millis() - _lastAirFetch < GEO_AQ_INTERVAL_MS && _lastAirFetch > 0) return;
+        fetchAirQuality();
     }
 
 private:
-    float         _lat       = 0.0f;
-    float         _lon       = 0.0f;
-    unsigned long _lastFetch = 0;
+    float         _lat         = 0.0f;
+    float         _lon         = 0.0f;
+    unsigned long _lastFetch   = 0;
+    unsigned long _lastAirFetch = 0;
 
     void fetch()
     {
@@ -110,6 +125,47 @@ private:
 
         Serial.printf("[Geo] Weather updated: code=%d temp=%.1f condition=%d\n",
                       weather.weatherCode, weather.temperature, (int)weather.condition);
+    }
+
+    void fetchAirQuality()
+    {
+        String url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+                     "?latitude="  + String(_lat, 6) +
+                     "&longitude=" + String(_lon, 6) +
+                     "&current=pm10,pm2_5,nitrogen_dioxide,ozone";
+
+        WiFiClientSecure client;
+        client.setInsecure();
+        HTTPClient http;
+        http.setTimeout(8000);
+
+        if (!http.begin(client, url)) { Serial.println("[AQ] http.begin failed"); return; }
+
+        int code = http.GET();
+        if (code != 200)
+        {
+            Serial.printf("[AQ] HTTP error: %d\n", code);
+            http.end();
+            return;
+        }
+
+        String body = http.getString();
+        http.end();
+
+        JsonDocument doc;
+        if (deserializeJson(doc, body)) { Serial.println("[AQ] JSON error"); return; }
+
+        JsonObject c = doc["current"];
+        airQuality.pm2_5  = c["pm2_5"]             | 0.0f;
+        airQuality.pm10   = c["pm10"]               | 0.0f;
+        airQuality.no2    = c["nitrogen_dioxide"]   | 0.0f;
+        airQuality.ozone  = c["ozone"]              | 0.0f;
+        airQuality.valid  = true;
+        airQuality.lastUpdate = millis();
+        _lastAirFetch         = millis();
+
+        Serial.printf("[AQ] Updated: PM2.5=%.1f PM10=%.1f NO2=%.1f O3=%.1f\n",
+                      airQuality.pm2_5, airQuality.pm10, airQuality.no2, airQuality.ozone);
     }
 
     static WeatherCondition mapCondition(int code)

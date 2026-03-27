@@ -326,6 +326,55 @@ public:
             mqttClient.publish(discTopic.c_str(), payload.c_str(), true);
         }
 
+        // Air quality sensors
+        struct { const char *name; const char *id; const char *unit; } aqSensors[] = {
+            {"PM2.5",  "pm2_5", "µg/m³"},
+            {"PM10",   "pm10",  "µg/m³"},
+            {"NO₂",    "no2",   "µg/m³"},
+            {"Ozone",  "ozone", "µg/m³"},
+        };
+        for (auto &s : aqSensors)
+        {
+            String uid        = clientId + "_aq_" + s.id;
+            String discTopic  = "homeassistant/sensor/" + uid + "/config";
+            String stateTopic = topicPrefix + "/status/airquality/" + s.id;
+
+            JsonDocument doc;
+            doc["name"]                = s.name;
+            doc["unique_id"]           = uid;
+            doc["state_topic"]         = stateTopic;
+            doc["state_class"]         = "measurement";
+            doc["unit_of_measurement"] = s.unit;
+            doc["entity_category"]     = "diagnostic";
+
+            JsonObject dev        = doc["device"].to<JsonObject>();
+            dev["identifiers"][0] = clientId;
+            dev["name"]           = "Semaphore";
+            dev["model"]          = "ESP32-C3";
+
+            String payload;
+            serializeJson(doc, payload);
+            mqttClient.publish(discTopic.c_str(), payload.c_str(), true);
+        }
+
+        // Air quality color button
+        {
+            String uid   = clientId + "_air_quality_color";
+            String topic = "homeassistant/button/" + uid + "/config";
+            JsonDocument doc;
+            doc["name"]          = "Air Quality Color";
+            doc["unique_id"]     = uid;
+            doc["command_topic"] = cmdTopic;
+            doc["payload_press"] = "{\"type\":\"airQualityColor\"}";
+            JsonObject dev        = doc["device"].to<JsonObject>();
+            dev["identifiers"][0] = clientId;
+            dev["name"]           = "Semaphore";
+            dev["model"]          = "ESP32-C3";
+            String payload;
+            serializeJson(doc, payload);
+            mqttClient.publish(topic.c_str(), payload.c_str(), true);
+        }
+
         // RSSI sensor
         {
             String uid        = clientId + "_rssi";
@@ -352,6 +401,15 @@ public:
         }
 
         Serial.println("MQTT: HA discovery published");
+    }
+
+    void publishAirQuality(float pm2_5, float pm10, float no2, float ozone)
+    {
+        if (!mqttClient.connected()) return;
+        mqttClient.publish((topicPrefix + "/status/airquality/pm2_5").c_str(),  String(pm2_5,  1).c_str(), true);
+        mqttClient.publish((topicPrefix + "/status/airquality/pm10").c_str(),   String(pm10,   1).c_str(), true);
+        mqttClient.publish((topicPrefix + "/status/airquality/no2").c_str(),    String(no2,    1).c_str(), true);
+        mqttClient.publish((topicPrefix + "/status/airquality/ozone").c_str(),  String(ozone,  1).c_str(), true);
     }
 
     void publishRssi(int rssi)
