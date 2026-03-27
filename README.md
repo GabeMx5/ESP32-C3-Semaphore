@@ -79,6 +79,25 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 - **HTTP POST `/cmd`**: accepts the same JSON commands as WebSocket, useful for scripting or external integrations
 - **MQTT** optional with Home Assistant auto-discovery support
 
+### Serial Console
+
+Available commands via serial monitor (115200 baud):
+
+| Command | Description |
+|---|---|
+| `help` | List all commands |
+| `status` | Device overview: IP, SSID, RSSI, hostname, heap, uptime, version |
+| `version` | Firmware version |
+| `ip` | Current IP address |
+| `ssid` | Get current WiFi SSID |
+| `ssid <value>` | Set WiFi SSID (saved, requires reboot) |
+| `password <value>` | Set WiFi password (saved, requires reboot) |
+| `hostname <value>` | Set mDNS hostname (saved, requires reboot) |
+| `rssi` | WiFi signal strength in dBm |
+| `heap` | Free heap memory |
+| `uptime` | Seconds since boot |
+| `reboot` | Restart the device |
+
 ### OLED Display
 - Shows status messages at boot and operation feedback
 - Auto-sleep after 10 s of inactivity
@@ -244,7 +263,8 @@ pio run --target uploadfs
 │   ├── geoController.h       # Weather API (Open-Meteo) and location
 │   ├── monitorController.h   # OLED display
 │   ├── otaController.h       # Firmware + filesystem update from GitHub
-│   └── improvController.h    # Improv Wi-Fi Serial first-boot wizard
+│   ├── improvController.h    # Improv Wi-Fi Serial first-boot wizard
+│   └── serialConsole.h       # Serial monitor command interface
 └── data/                     # Web UI (LittleFS)
     ├── index.html
     ├── index.js
