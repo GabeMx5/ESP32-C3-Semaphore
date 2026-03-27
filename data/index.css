@@ -23,17 +23,30 @@
   pointer-events: none;
 }
 
+.ota-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  min-width: 240px;
+}
+
 .ota-steps {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 16px;
+  width: 100%;
 }
 
 .ota-step {
-  font-size: 0.85rem;
+  font-family: monospace;
+  font-size: 0.9rem;
   color: var(--secondary-text);
-  padding-left: 20px;
+  padding-left: 22px;
   position: relative;
 }
 
@@ -64,6 +77,13 @@
 @keyframes ota-pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
+}
+
+#ota-reconnect-msg {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  margin: 0;
 }
 
 #restore-overlay {

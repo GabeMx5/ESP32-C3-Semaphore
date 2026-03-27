@@ -142,6 +142,7 @@ function connect() {
   ws.addEventListener("close", () => {
     stopPing();
     if (otaFirmwareFlashing) {
+      document.getElementById("ota-reconnect-msg").style.display = "block";
       startReloadPoller();
       return;
     }
@@ -1251,7 +1252,6 @@ function onOtaStatus(step) {
   });
   if (step === "firmware") {
     otaFirmwareFlashing = true;
-    document.getElementById("ota-reconnect-msg").style.display = "block";
   }
 }
 

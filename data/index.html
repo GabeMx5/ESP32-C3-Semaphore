@@ -438,26 +438,24 @@
 
     <!-- OTA overlay -->
     <div id="ota-overlay" class="overlay">
-      <div class="overlay-box">
-        <div id="ota-phase-confirm">
-          <p class="overlay-title">Firmware update</p>
-          <p id="ota-latest-label" class="restore-sub"></p>
-          <div style="display:flex;gap:10px;margin-top:8px;">
-            <button class="save-btn" style="flex:1;margin:0;" onclick="confirmOTA()">Update</button>
-            <button class="save-btn" style="flex:1;margin:0;background:var(--border);" onclick="closeOtaOverlay()">Cancel</button>
-          </div>
+      <div class="overlay-box" id="ota-phase-confirm">
+        <p class="overlay-title">Firmware update</p>
+        <p id="ota-latest-label" class="restore-sub"></p>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="save-btn" style="flex:1;margin:0;" onclick="confirmOTA()">Update</button>
+          <button class="save-btn" style="flex:1;margin:0;background:var(--border);" onclick="closeOtaOverlay()">Cancel</button>
         </div>
-        <div id="ota-phase-progress" style="display:none;">
-          <p class="overlay-title">Updating device</p>
-          <div class="ota-steps">
-            <div class="ota-step" id="ota-step-backup">    Backing up config</div>
-            <div class="ota-step" id="ota-step-filesystem">Updating filesystem</div>
-            <div class="ota-step" id="ota-step-restore">   Restoring config</div>
-            <div class="ota-step" id="ota-step-firmware">  Updating firmware</div>
-            <div class="ota-step" id="ota-step-error" style="color:#f44336;display:none">Update failed</div>
-          </div>
-          <p id="ota-reconnect-msg" style="display:none;font-size:0.8rem;color:var(--secondary-text);margin-top:12px;">Device restarting, page will reload automatically…</p>
+      </div>
+      <div class="ota-card" id="ota-phase-progress" style="display:none;">
+        <p class="guess-heading">Updating device</p>
+        <div class="ota-steps">
+          <div class="ota-step" id="ota-step-backup">   Backing up config</div>
+          <div class="ota-step" id="ota-step-filesystem">Updating filesystem</div>
+          <div class="ota-step" id="ota-step-restore">  Restoring config</div>
+          <div class="ota-step" id="ota-step-firmware"> Updating firmware</div>
+          <div class="ota-step" id="ota-step-error" style="color:#f44336;display:none">Update failed</div>
         </div>
+        <p id="ota-reconnect-msg" style="display:none;">Device restarting, page will reload automatically…</p>
       </div>
     </div>
 
