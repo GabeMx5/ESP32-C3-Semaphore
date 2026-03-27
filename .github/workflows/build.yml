@@ -34,16 +34,16 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
-      - name: Build firmware
-        run: pio run -e esp32c3
+      - name: Build firmware (installer variant, with Improv)
+        run: pio run -e esp32c3_installer
 
       - name: Build filesystem
-        run: pio run -t buildfs -e esp32c3
+        run: pio run -t buildfs -e esp32c3_installer
 
       - name: Prepare artifacts (dev)
         if: github.ref == 'refs/heads/main'
         run: |
-          BUILD=.pio/build/esp32c3
+          BUILD=.pio/build/esp32c3_installer
           cp $BUILD/firmware.bin   $BUILD/firmware-dev.bin
           cp $BUILD/littlefs.bin   $BUILD/filesystem-dev.bin
           cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
@@ -52,7 +52,7 @@ jobs:
       - name: Prepare artifacts (release)
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          BUILD=.pio/build/esp32c3
+          BUILD=.pio/build/esp32c3_installer
           cp $BUILD/firmware.bin   $BUILD/firmware-${{ github.ref_name }}.bin
           cp $BUILD/littlefs.bin   $BUILD/filesystem-${{ github.ref_name }}.bin
           cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
@@ -67,13 +67,13 @@ jobs:
           prerelease: true
           make_latest: false
           files: |
-            .pio/build/esp32c3/firmware-dev.bin
-            .pio/build/esp32c3/filesystem-dev.bin
-            .pio/build/esp32c3/firmware.bin
-            .pio/build/esp32c3/filesystem.bin
-            .pio/build/esp32c3/bootloader.bin
-            .pio/build/esp32c3/partitions.bin
-            .pio/build/esp32c3/boot_app0.bin
+            .pio/build/esp32c3_installer/firmware-dev.bin
+            .pio/build/esp32c3_installer/filesystem-dev.bin
+            .pio/build/esp32c3_installer/firmware.bin
+            .pio/build/esp32c3_installer/filesystem.bin
+            .pio/build/esp32c3_installer/bootloader.bin
+            .pio/build/esp32c3_installer/partitions.bin
+            .pio/build/esp32c3_installer/boot_app0.bin
 
       - name: Stable release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -82,13 +82,13 @@ jobs:
           name: ${{ github.ref_name }}
           make_latest: true
           files: |
-            .pio/build/esp32c3/firmware-${{ github.ref_name }}.bin
-            .pio/build/esp32c3/filesystem-${{ github.ref_name }}.bin
-            .pio/build/esp32c3/firmware.bin
-            .pio/build/esp32c3/filesystem.bin
-            .pio/build/esp32c3/bootloader.bin
-            .pio/build/esp32c3/partitions.bin
-            .pio/build/esp32c3/boot_app0.bin
+            .pio/build/esp32c3_installer/firmware-${{ github.ref_name }}.bin
+            .pio/build/esp32c3_installer/filesystem-${{ github.ref_name }}.bin
+            .pio/build/esp32c3_installer/firmware.bin
+            .pio/build/esp32c3_installer/filesystem.bin
+            .pio/build/esp32c3_installer/bootloader.bin
+            .pio/build/esp32c3_installer/partitions.bin
+            .pio/build/esp32c3_installer/boot_app0.bin
 
       - name: Build GitHub Pages
         if: github.ref == 'refs/heads/main'

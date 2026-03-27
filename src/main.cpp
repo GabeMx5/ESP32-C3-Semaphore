@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.4"
+#define FIRMWARE_VERSION "0.7.5"
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -16,7 +16,9 @@
 #include "configController.h"
 #include "geoController.h"
 #include "otaController.h"
+#ifdef IMPROV_ENABLED
 #include "improvController.h"
+#endif
 
 AsyncWebServer webServer(80);
 AsyncWebSocket ws("/ws");
@@ -745,9 +747,11 @@ void setup()
         Serial.println("LittleFS mount failed");
         return;
     }
+#ifdef IMPROV_ENABLED
     // Improv must run before any other Serial output to avoid confusing ESP Web Tools
     if (!LittleFS.exists("/wifi.json"))
         runImprovSetup(FIRMWARE_VERSION);
+#endif
 
     monitorController.begin();
     monitorController.displayMessage("Startup...");
