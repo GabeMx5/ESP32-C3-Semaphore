@@ -522,7 +522,7 @@ function onSysInfo(data) {
   document.getElementById("infoVersion").textContent = data.version  ? `v${data.version}` : "—";
   if (data.version && data.version !== _deviceVersion) {
     _deviceVersion = data.version;
-    checkFirmwareUpdate();
+    checkFirmwareUpdate(false, true);
   }
   document.getElementById("infoIp").textContent     = data.ip       || "—";
   document.getElementById("infoSsid").textContent   = data.ssid     || "—";
@@ -1174,7 +1174,7 @@ function _setUpdateBtn(state) {
   icon.outerHTML = (state === "available" ? SVG_UPLOAD : SVG_REFRESH).replace('<svg ', '<svg id="updateBtnIcon" ');
 }
 
-function checkFirmwareUpdate(notify = false) {
+function checkFirmwareUpdate(notify = false, autoShow = false) {
   if (!_deviceVersion) return;
   _setUpdateBtn("checking");
   fetch(GITHUB_RELEASES_URL)
@@ -1183,6 +1183,13 @@ function checkFirmwareUpdate(notify = false) {
       _latestVersion = data.tag_name || null;
       if (_latestVersion && _isNewer(_latestVersion, _deviceVersion)) {
         _setUpdateBtn("available");
+        if (autoShow) {
+          document.getElementById("ota-latest-label").textContent =
+            `Current: v${_deviceVersion}  →  Latest: ${_latestVersion}`;
+          document.getElementById("ota-phase-confirm").style.display  = "";
+          document.getElementById("ota-phase-progress").style.display = "none";
+          document.getElementById("ota-overlay").classList.add("visible");
+        }
       } else {
         _setUpdateBtn("upToDate");
         if (notify) showToast(`v${_deviceVersion} is the latest version`);
@@ -1190,7 +1197,7 @@ function checkFirmwareUpdate(notify = false) {
     })
     .catch(() => {
       _setUpdateBtn("upToDate");
-      showToast("Could not reach GitHub", "error");
+      if (notify) showToast("Could not reach GitHub", "error");
     });
 }
 

@@ -75,7 +75,7 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 - **mDNS** with configurable hostname (default `semaphore.local`)
 - **WebSocket** real-time with application-level ping/pong (3 s interval, 2 s timeout)
 - **OTA** (ArduinoOTA) for wireless firmware updates from PlatformIO
-- **Firmware update from web UI**: the INFO tab allows updating firmware and filesystem directly from the latest GitHub release, with automatic config backup/restore
+- **Firmware update from web UI**: the INFO tab allows updating firmware and filesystem directly from the latest GitHub release, with automatic config backup/restore. On every new connection the device automatically checks for available updates and shows the update prompt if a newer version is found
 - **HTTP POST `/cmd`**: accepts the same JSON commands as WebSocket, useful for scripting or external integrations
 - **MQTT** optional with Home Assistant auto-discovery support
 
