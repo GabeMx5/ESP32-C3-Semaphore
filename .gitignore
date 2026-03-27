@@ -9,3 +9,6 @@ data/wifi.json
 data/mqtt.json
 data/config.json
 data/timers.json
+
+# Generated gzip assets (built by compress_web.py from src_data/)
+data/*.gz

@@ -288,9 +288,13 @@ pio run --target uploadfs
 │   ├── otaController.h       # Firmware + filesystem update from GitHub
 │   ├── improvController.h    # Improv Wi-Fi Serial first-boot wizard
 │   └── serialConsole.h       # Serial monitor command interface
-└── data/                     # Web UI (LittleFS)
-    ├── index.html
-    ├── index.js
-    ├── index.css
-    └── manifest.json
+├── src_data/                 # Web UI sources (not flashed directly)
+│   ├── index.html
+│   ├── index.js
+│   ├── index.css
+│   ├── manifest.json
+│   └── *.svg / *.png
+├── data/                     # LittleFS image root (generated .gz files + runtime config)
+├── compress_web.py           # Pre-build script: gzip-compresses src_data/ → data/
+└── partitions.csv            # Custom partition table (1856 KB OTA slots)
 ```
