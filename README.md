@@ -12,7 +12,7 @@ Flash the firmware directly from the browser (Chrome / Edge) — no tools requir
 
 **[https://gabemx5.github.io/ESP32-C3-Semaphore/](https://gabemx5.github.io/ESP32-C3-Semaphore/)**
 
-After flashing, a Wi-Fi setup wizard (Improv Serial) will guide you through connecting the device to your network.
+After flashing, the device enters an **Improv Wi-Fi Serial** setup wizard. Enter your Wi-Fi credentials from the browser within **1 minute**. If the timeout expires, the device automatically switches to **Access Point mode** (`192.168.4.1`) so you can configure it from the web UI without USB.
 
 ---
 
@@ -72,7 +72,7 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 
 ### Connectivity
 - **WiFi** STA with DHCP or static IP; fallback to AP mode (`192.168.4.1`) after 3 failed attempts (3-minute timeout, then auto-restart)
-- **Improv Wi-Fi Serial** first-boot wizard: after flashing, configure WiFi credentials directly from the browser via the web installer
+- **Improv Wi-Fi Serial** first-boot wizard: after flashing, configure WiFi credentials from the browser within 1 minute; after the timeout the device switches to AP mode (`192.168.4.1`) automatically
 - **mDNS** with configurable hostname (default `semaphore.local`)
 - **WebSocket** real-time with application-level ping/pong (3 s interval, 2 s timeout)
 - **OTA** (ArduinoOTA) for wireless firmware updates from PlatformIO
