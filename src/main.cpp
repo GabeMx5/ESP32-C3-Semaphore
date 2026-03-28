@@ -799,7 +799,15 @@ void setup()
         return;
     }
 #ifdef IMPROV_ENABLED
-    improvController.begin(FIRMWARE_VERSION);
+    if (improvController.begin(FIRMWARE_VERSION)) {
+        // Improv active: block here so the Web Installer gets immediate responses.
+        // Non-Improv bytes (first byte != 0x49) are routed to the serial console.
+        serialConsole.begin();
+        while (true) {
+            if (!improvController.loop()) serialConsole.loop();
+        }
+        // Never reached — improvController reboots after successful provisioning.
+    }
 #endif
 
     monitorController.begin();
@@ -914,11 +922,7 @@ void setup()
                  { Serial.printf("Error[%u]\n", error); });
     ArduinoOTA.begin();
 
-#ifdef IMPROV_ENABLED
-    if (!improvController.isActive()) serialConsole.begin();
-#else
     serialConsole.begin();
-#endif
 
     // Mark firmware as valid — cancels automatic rollback.
     // If setup() never reaches this point (crash, watchdog, panic),
@@ -959,11 +963,7 @@ void loop()
     static unsigned long lastAirQualPublish  = 0;
     static unsigned long lastRssiPublish     = 0;
     geoController.loop();
-#ifdef IMPROV_ENABLED
-    if (!improvController.loop()) serialConsole.loop();
-#else
     serialConsole.loop();
-#endif
     if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
     {
         lastWeatherPublish = geoController.weather.lastUpdate;
