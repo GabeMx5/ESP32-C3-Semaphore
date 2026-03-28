@@ -130,26 +130,20 @@ static void improvFeedAndProcess(const char* fwName, const char* fwVer) {
                 improvSendDeviceInfo(fwName, fwVer);
 
             } else if (cmd == 0x04) {
-                // REQUEST_WIFI_NETWORKS — scan and return one RPC_RESULT per network
+                // REQUEST_WIFI_NETWORKS — one RPC_RESULT per network (SSID only, no cmd byte)
+                // The Improv spec does not include a cmd byte in the network scan response.
                 WiFi.mode(WIFI_STA);
                 int n = WiFi.scanNetworks(); // blocking ~2-4 s
                 if (n < 0) n = 0;
-                uint8_t pkt[64];
+                uint8_t pkt[40];
                 for (int i = 0; i < n; i++) {
-                    int p = 0;
-                    pkt[p++] = 0x04; // responding to cmd 0x04
-                    p = s_improvAppend(pkt, p, WiFi.SSID(i).c_str());
-                    char rssi[8];
-                    snprintf(rssi, sizeof(rssi), "%d", WiFi.RSSI(i));
-                    p = s_improvAppend(pkt, p, rssi);
-                    p = s_improvAppend(pkt, p,
-                        WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "YES" : "NO");
+                    int p = s_improvAppend(pkt, 0, WiFi.SSID(i).c_str());
                     improvSendPacket(0x04, pkt, (uint8_t)p);
                 }
                 WiFi.scanDelete();
-                // End-of-list marker: cmd only, no strings
-                const uint8_t eol[] = {0x04};
-                improvSendPacket(0x04, eol, 1);
+                // End-of-list marker: empty packet
+                static const uint8_t eol[] = {};
+                improvSendPacket(0x04, eol, 0);
 
             } else if (cmd == 0x01 && dataLen >= 2) {
                 // SEND_WIFI_SETTINGS: d = [cmd, ssidLen, ssid..., pwdLen, pwd...]
