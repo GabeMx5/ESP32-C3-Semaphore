@@ -59,17 +59,18 @@ public:
     bool isActive() const { return _active; }
 
     // Call every loop() iteration.
-    // Peeks at the first available byte:
-    //   0x49 ('I') → forwards to Improv handler (returns true = consumed)
-    //   anything else → returns false (SerialConsole should handle it)
+    // Always ticks the Improv handler so it can send periodic state broadcasts
+    // (required for Web Installer detection).
+    // Returns false only when incoming serial data is not an Improv packet,
+    // allowing SerialConsole to handle it instead.
     // On successful provisioning, saves wifi.json and reboots.
     bool loop() {
         if (!_active || !_improv) return false;
 
-        if (!Serial.available()) return false;
+        // If data is available and it's NOT an Improv packet, let the console handle it.
+        if (Serial.available() && Serial.peek() != 0x49) return false;
 
-        if (Serial.peek() != 0x49) return false;  // not an Improv packet
-
+        // Always tick Improv — needed for periodic state broadcasts even with no data.
         _improv->handleSerial();
 
         if (s_improvProvisioned) {
