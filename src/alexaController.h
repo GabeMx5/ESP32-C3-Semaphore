@@ -9,22 +9,24 @@
 // ─── AlexaController ─────────────────────────────────────────────────────────
 // Custom Philips Hue Bridge emulation — no external library required.
 //
-// Presents itself as a single Hue bridge with 3 "Extended color light" bulbs,
-// one per LED. Alexa imports each light as an independent device with full
-// RGB color control.
+// Presents itself as a single Hue bridge with 4 devices:
+//   - 3 "Extended color light" bulbs (one per LED) with full RGB control
+//   - 1 "On/Off light" (key "4") that toggles party mode
 //
 // Protocol flow:
 //   1. SSDP multicast (239.255.255.250:1900) — responds to Alexa M-SEARCH
 //   2. GET /desc.xml               — UPnP device description
 //   3. POST /api                   — Hue username handshake
-//   4. GET /api/{user}/lights      — light list (keys "1", "2", "3")
+//   4. GET /api/{user}/lights      — light list (keys "1"–"4")
 //   5. GET /api/{user}/lights/{k}  — individual light state
 //   6. PUT /api/{user}/lights/{k}/state — color/on-off control
 //
-// Light key → LED mapping:
-//   key "1" = Semaphore top    → LED 2
-//   key "2" = Semaphore middle → LED 1
-//   key "3" = Semaphore bottom → LED 0
+// Light key → function mapping:
+//   key "1" = Semaphore top     → LED 2
+//   key "2" = Semaphore middle  → LED 1
+//   key "3" = Semaphore bottom  → LED 0
+//   key "4" = Semaphore party   → party mode on/off
+//   key "5" = Semaphore rainbow → rainbow mode on/off
 //
 // Key design decisions:
 //   - Two UDP sockets: _udp for multicast receive, _udpOut (bound once on port
@@ -50,8 +52,8 @@ class AlexaController {
     }
 
     static const char* _name(uint8_t key) {
-        static const char* n[] = { "", "Semaphore top", "Semaphore middle", "Semaphore bottom" };
-        return (key >= 1 && key <= 3) ? n[key] : "";
+        static const char* n[] = { "", "Semaphore top", "Semaphore middle", "Semaphore bottom", "Semaphore party", "Semaphore rainbow" };
+        return (key >= 1 && key <= 5) ? n[key] : "";
     }
 
     // ── Color helpers ─────────────────────────────────────────────────────────
@@ -161,6 +163,21 @@ class AlexaController {
         return String(buf);
     }
 
+    // Simple on/off JSON for effect lights (keys 4–5)
+    String _effectJson(uint8_t key, bool on) {
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+            "{\"state\":{\"on\":%s,\"bri\":254,\"alert\":\"none\",\"reachable\":true},"
+            "\"type\":\"On/Off light\","
+            "\"name\":\"%s\","
+            "\"modelid\":\"LOM001\","
+            "\"manufacturername\":\"Philips\","
+            "\"uniqueid\":\"%s\","
+            "\"swversion\":\"1.88.1\"}",
+            on ? "true" : "false", _name(key), _uniqueId(key).c_str());
+        return String(buf);
+    }
+
     void _handleApi(AsyncWebServerRequest* req) {
         String url = req->url();
 
@@ -171,11 +188,40 @@ class AlexaController {
             return;
         }
 
-        // PUT /api/{user}/lights/{key}/state — set LED color/state
+        // PUT /api/{user}/lights/{key}/state — set LED color/state or party mode
         if (req->method() == HTTP_PUT && url.indexOf("/state") > 0) {
             int li = url.indexOf("/lights/");
             if (li >= 0) {
                 uint8_t key = url.substring(li + 8).toInt();
+
+                // Key 4 = party mode toggle
+                if (key == 4) {
+                    JsonDocument doc;
+                    if (!deserializeJson(doc, _body) && !doc["on"].isNull()) {
+                        bool on = doc["on"].as<bool>();
+                        _leds->setParty(on, _leds->getPartyMadness());
+                        Serial.printf("[Alexa] party → %s\n", on ? "ON" : "OFF");
+                        if (onChanged) onChanged();
+                    }
+                    _body = "";
+                    req->send(200, "application/json", "[{\"success\":true}]");
+                    return;
+                }
+
+                // Key 5 = rainbow mode toggle
+                if (key == 5) {
+                    JsonDocument doc;
+                    if (!deserializeJson(doc, _body) && !doc["on"].isNull()) {
+                        bool on = doc["on"].as<bool>();
+                        _leds->setRainbow(on, _leds->getRainbowCycleTime());
+                        Serial.printf("[Alexa] rainbow → %s\n", on ? "ON" : "OFF");
+                        if (onChanged) onChanged();
+                    }
+                    _body = "";
+                    req->send(200, "application/json", "[{\"success\":true}]");
+                    return;
+                }
+
                 if (key >= 1 && key <= 3) {
                     JsonDocument doc;
                     if (!deserializeJson(doc, _body)) {
@@ -219,15 +265,21 @@ class AlexaController {
             if (suffix.length() <= 1) {
                 String resp = "{";
                 for (uint8_t k = 1; k <= 3; k++) {
-                    if (k > 1) resp += ",";
-                    resp += "\"" + String(k) + "\":" + _deviceJson(k);
+                    resp += "\"" + String(k) + "\":" + _deviceJson(k) + ",";
                 }
-                resp += "}";
+                resp += "\"4\":" + _effectJson(4, _leds->getPartyEnabled()) + ",";
+                resp += "\"5\":" + _effectJson(5, _leds->getRainbowEnabled()) + "}";
                 req->send(200, "application/json", resp);
             } else {
                 uint8_t key = suffix.substring(1).toInt();
-                req->send(200, "application/json",
-                    (key >= 1 && key <= 3) ? _deviceJson(key) : "{}");
+                if (key >= 1 && key <= 3)
+                    req->send(200, "application/json", _deviceJson(key));
+                else if (key == 4)
+                    req->send(200, "application/json", _effectJson(4, _leds->getPartyEnabled()));
+                else if (key == 5)
+                    req->send(200, "application/json", _effectJson(5, _leds->getRainbowEnabled()));
+                else
+                    req->send(200, "application/json", "{}");
             }
             return;
         }
