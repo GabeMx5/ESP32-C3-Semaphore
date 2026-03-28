@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.24"
+#define FIRMWARE_VERSION "0.7.25"
 
 #include <WiFi.h>
 // forward declaration
@@ -37,9 +37,6 @@ ConfigController configController;
 GeoController    geoController;
 OTAController    otaController;
 SerialConsole    serialConsole(wifiManager, mqttController, FIRMWARE_VERSION);
-#ifdef IMPROV_ENABLED
-ImprovController improvController;
-#endif
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -799,15 +796,8 @@ void setup()
         return;
     }
 #ifdef IMPROV_ENABLED
-    if (improvController.begin(FIRMWARE_VERSION)) {
-        // Improv active: block here so the Web Installer gets immediate responses.
-        // Non-Improv bytes (first byte != 0x49) are routed to the serial console.
-        serialConsole.begin();
-        while (true) {
-            if (!improvController.loop()) serialConsole.loop();
-        }
-        // Never reached — improvController reboots after successful provisioning.
-    }
+    if (!LittleFS.exists("/wifi.json"))
+        runImprovSetup(FIRMWARE_VERSION);
 #endif
 
     monitorController.begin();
