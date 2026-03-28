@@ -85,8 +85,6 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 
 Interactive REPL over USB serial (115200 baud). Follows Tasmota conventions: characters are echoed as you type, backspace works, each command is shown with a `CMD:` prefix and each response line with `RST:`.
 
-The console runs concurrently with the Improv Wi-Fi setup wizard during first boot. Incoming bytes are routed: Improv packets (starting with `0x49` = `I`) go to the Improv handler, everything else is processed by the console normally.
-
 ```
 > status
 CMD: status
