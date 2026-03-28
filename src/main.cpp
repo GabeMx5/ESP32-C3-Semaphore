@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.21"
+#define FIRMWARE_VERSION "0.7.22"
 
 #include <WiFi.h>
 // forward declaration
@@ -37,6 +37,9 @@ ConfigController configController;
 GeoController    geoController;
 OTAController    otaController;
 SerialConsole    serialConsole(wifiManager, mqttController, FIRMWARE_VERSION);
+#ifdef IMPROV_ENABLED
+ImprovController improvController;
+#endif
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -796,9 +799,7 @@ void setup()
         return;
     }
 #ifdef IMPROV_ENABLED
-    // Improv must run before any other Serial output to avoid confusing ESP Web Tools
-    if (!LittleFS.exists("/wifi.json"))
-        runImprovSetup(FIRMWARE_VERSION);
+    improvController.begin(FIRMWARE_VERSION);
 #endif
 
     monitorController.begin();
@@ -913,7 +914,11 @@ void setup()
                  { Serial.printf("Error[%u]\n", error); });
     ArduinoOTA.begin();
 
+#ifdef IMPROV_ENABLED
+    if (!improvController.isActive()) serialConsole.begin();
+#else
     serialConsole.begin();
+#endif
 
     // Mark firmware as valid — cancels automatic rollback.
     // If setup() never reaches this point (crash, watchdog, panic),
@@ -954,7 +959,11 @@ void loop()
     static unsigned long lastAirQualPublish  = 0;
     static unsigned long lastRssiPublish     = 0;
     geoController.loop();
+#ifdef IMPROV_ENABLED
+    if (!improvController.loop()) serialConsole.loop();
+#else
     serialConsole.loop();
+#endif
     if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
     {
         lastWeatherPublish = geoController.weather.lastUpdate;
