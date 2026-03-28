@@ -16,7 +16,6 @@ public:
     String wifiSSID;
     String wifiPassword;
     bool  dhcp      = true;
-    bool  apMode    = false;
     IPAddress localIP;
     IPAddress subnet;
     IPAddress gateway;
@@ -49,7 +48,6 @@ public:
         wifiSSID     = doc["ssid"]     | "";
         wifiPassword = doc["password"] | "";
         dhcp         = doc["dhcp"]     | true;
-        apMode       = doc["apmode"]   | false;
         Serial.println("WiFi config loaded:");
         Serial.printf("SSID: %s\n", wifiSSID.c_str());
         Serial.printf("DHCP: %s\n", dhcp ? "true" : "false");
@@ -66,7 +64,7 @@ public:
             Serial.printf("DNS: %s\n", dns.toString().c_str());
         }
 
-        return apMode || wifiSSID.length() > 0;
+        return wifiSSID.length() > 0;
     }
 
     /* =============================
