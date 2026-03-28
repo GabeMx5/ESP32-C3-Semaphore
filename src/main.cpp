@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.25"
+#define FIRMWARE_VERSION "0.7.26"
 
 #include <WiFi.h>
 // forward declaration
