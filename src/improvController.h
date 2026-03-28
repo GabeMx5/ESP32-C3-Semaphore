@@ -39,8 +39,20 @@ inline void runImprovSetup(const char* firmwareVersion)
     );
     improv.setCustomConnectWiFi(improvConnectWifi);
 
+    unsigned long startTime = millis();
     while (!s_improvProvisioned) {
         improv.handleSerial();
+        if (millis() - startTime > 60000) {
+            Serial.println("[Improv] Timeout — switching to Access Point mode");
+            // Write an empty wifi.json so Improv is not re-entered on next boot;
+            // networkManager will fall through to AP mode (empty SSID).
+            JsonDocument t;
+            t["ssid"] = "";
+            File f = LittleFS.open("/wifi.json", "w");
+            if (f) { serializeJson(t, f); f.close(); }
+            delay(200);
+            ESP.restart();
+        }
         delay(1);
     }
 
