@@ -60,21 +60,18 @@ public:
             [this](EspalexaDevice* d) { onDevice(0, d); },
             EspalexaDeviceType::extendedcolor);
 
-        // Route Alexa API HTTP requests to Espalexa.
-        // These handlers must be registered BEFORE serveStatic so they are
-        // checked first (ESPAsyncWebServer processes handlers in FIFO order).
-        // /description.xml is also registered by begin() but we add it explicitly
-        // first so it is not shadowed by the serveStatic catch-all.
-        server.on("/description.xml", HTTP_GET, [this](AsyncWebServerRequest* req) {
-            _espalexa.handleAlexaApiCall(req);
-        });
+        // /api/* must be registered BEFORE setupWebServer() adds serveStatic,
+        // otherwise the serveStatic catch-all intercepts Hue API calls first.
+        // ESPAsyncWebServer processes handlers in FIFO order.
         server.on("/api/*", HTTP_ANY, [this](AsyncWebServerRequest* req) {
             if (!_espalexa.handleAlexaApiCall(req))
                 req->send(404);
         });
 
-        // begin(&server) registers the onRequestBody handler (stores body
-        // internally so handleAlexaApiCall(req) can read it) and onNotFound.
+        // begin(&server) registers /description.xml (serveDescription) and
+        // onRequestBody (stores body for handleAlexaApiCall). Both are added
+        // to the server here, before setupWebServer() adds serveStatic, so
+        // they take priority.
         _espalexa.begin(&server);
     }
 
