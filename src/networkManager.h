@@ -116,6 +116,13 @@ public:
         {
             Serial.println("WiFi config loaded.");
 
+            if (wifiManager->apMode)
+            {
+                Serial.println("AP mode configured — starting Access Point.");
+                startAccessPoint();
+                return;
+            }
+
             retryCounter = 0;
 
             while (retryCounter < MAX_WIFI_RETRY)

@@ -53,8 +53,47 @@
     esp-web-install-button {
       --esp-tools-button-color: #b1ff42;
       --esp-tools-button-text-color: #0d1117;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
       display: block;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #484f58;
+      font-size: 0.75rem;
+      margin: 4px 0 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #30363d;
+    }
+
+    .ap-btn {
+      width: 100%;
+      background: transparent;
+      color: #8b949e;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .ap-btn:hover {
+      border-color: #8b949e;
+      color: #e6edf3;
+    }
+    .ap-status {
+      font-size: 0.78rem;
+      min-height: 1.2em;
+      margin-bottom: 16px;
+      color: #8b949e;
     }
 
     .requirements {
@@ -147,6 +186,11 @@
       "><span id="installBtnText">Install</span></button>
     </esp-web-install-button>
 
+    <div class="divider">or</div>
+
+    <button class="ap-btn" id="apBtn">&#x1F4F6; Configure as Access Point</button>
+    <div class="ap-status" id="apStatus">Close the installer dialog first, then click this button.</div>
+
     <script>
       if (!('serial' in navigator)) {
         document.getElementById('notSupported').style.display = 'block';
@@ -158,6 +202,25 @@
           if (v) document.getElementById('installBtnText').textContent = `Install v${v}`;
         })
         .catch(() => {});
+
+      document.getElementById('apBtn').addEventListener('click', async () => {
+        const status = document.getElementById('apStatus');
+        try {
+          const port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 115200 });
+          const writer = port.writable.getWriter();
+          await writer.write(new TextEncoder().encode('\napmode\n'));
+          writer.releaseLock();
+          await new Promise(r => setTimeout(r, 400));
+          await port.close();
+          status.textContent = '✓ Done. Connect to the "Semaphore" WiFi network, then open 192.168.4.1';
+          status.style.color = '#b1ff42';
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+          status.textContent = 'Error: ' + e.message;
+          status.style.color = '#f45336';
+        }
+      });
     </script>
 
     <div class="requirements">

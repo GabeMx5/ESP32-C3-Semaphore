@@ -6,6 +6,7 @@
 #include <ImprovWiFiLibrary.h>
 
 static bool   s_improvProvisioned = false;
+static bool   s_improvApMode      = false;
 static String s_improvSsid;
 static String s_improvPwd;
 
@@ -39,17 +40,42 @@ inline void runImprovSetup(const char* firmwareVersion)
     );
     improv.setCustomConnectWiFi(improvConnectWifi);
 
-    while (!s_improvProvisioned) {
-        improv.handleSerial();
+    // Route incoming bytes: Improv packets (0x49='I') → library,
+    // everything else → mini-console for the "apmode" command.
+    String consoleBuf;
+    while (!s_improvProvisioned && !s_improvApMode) {
+        if (Serial.available() && Serial.peek() != 0x49) {
+            char c = Serial.read();
+            if (c == '\r') {
+            } else if (c == '\n') {
+                consoleBuf.trim();
+                if (consoleBuf == "apmode") {
+                    s_improvApMode = true;
+                } else {
+                    consoleBuf = "";
+                }
+            } else {
+                consoleBuf += c;
+            }
+        } else {
+            improv.handleSerial();
+        }
         delay(1);
     }
 
     JsonDocument doc;
-    doc["ssid"]     = s_improvSsid;
-    doc["password"] = s_improvPwd;
-    File f = LittleFS.open("/wifi.json", "w");
-    if (f) { serializeJson(doc, f); f.close(); }
-    Serial.printf("[Improv] Saved — rebooting\n");
-    delay(1000);
+    if (s_improvApMode) {
+        doc["apmode"] = true;
+        File f = LittleFS.open("/wifi.json", "w");
+        if (f) { serializeJson(doc, f); f.close(); }
+        Serial.println("[Improv] AP mode saved — rebooting");
+    } else {
+        doc["ssid"]     = s_improvSsid;
+        doc["password"] = s_improvPwd;
+        File f = LittleFS.open("/wifi.json", "w");
+        if (f) { serializeJson(doc, f); f.close(); }
+        Serial.printf("[Improv] Saved — rebooting\n");
+    }
+    delay(500);
     ESP.restart();
 }

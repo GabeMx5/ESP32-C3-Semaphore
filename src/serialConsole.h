@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <WiFi.h>
+#include <LittleFS.h>
 #include "wifiConfigManager.h"
 #include "mqttController.h"
 
@@ -87,6 +88,7 @@ private:
             _print("  rssi                    — WiFi signal strength");
             _print("  heap                    — free heap memory");
             _print("  uptime                  — device uptime");
+            _print("  apmode                  — switch to Access Point mode (192.168.4.1)");
             _print("  reboot                  — restart device");
             _print("  mqtt                    — show MQTT configuration");
             _print("  mqtt broker <value>     — set MQTT broker");
@@ -287,6 +289,16 @@ private:
             } else {
                 Serial.printf("Unknown mqtt subcommand: %s\n", sub.c_str());
             }
+
+        } else if (cmd == "apmode") {
+            _print("Switching to Access Point mode...");
+            JsonDocument apDoc;
+            apDoc["apmode"] = true;
+            File apf = LittleFS.open("/wifi.json", "w");
+            if (apf) { serializeJson(apDoc, apf); apf.close(); }
+            _print("Saved. Connect to \"Semaphore\" WiFi, then open 192.168.4.1");
+            delay(500);
+            ESP.restart();
 
         } else if (cmd == "reboot") {
             _print("Rebooting...");
