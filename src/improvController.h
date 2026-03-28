@@ -26,38 +26,63 @@ static bool improvConnectWifi(const char* ssid, const char* pwd) {
     return false;
 }
 
-// ─── Improv setup ─────────────────────────────────────────────────────────────
-//
-// Blocks until WiFi credentials are received via the Web Installer.
-// Serial bytes are routed by first byte:
-//   0x49 ('I', Improv magic header) → Improv handler
-//   anything else                   → lightweight serial console
-//
-// Saves wifi.json and reboots on success. Never returns.
-//
-inline void runImprovSetup(const char* firmwareVersion)
-{
-    Serial.println("[Improv] No WiFi config — entering Improv setup");
+// Global Improv object — created in improvEarlyInit() so it can process bytes
+// buffered during USB re-enumeration, before LittleFS is even mounted.
+static ImprovWiFi* s_improv = nullptr;
 
-    ImprovWiFi improv(&Serial);
-    improv.setDeviceInfo(
+// ─── Helper: send an immediate CURRENT_STATE broadcast ───────────────────────
+// Bypasses the library's internal timer so the web installer detects the device
+// immediately. State 0x02 = AUTHORIZED (no physical access required).
+static void improvSendCurrentState()
+{
+    // Packet: IMPROV v1, type=CURRENT_STATE(1), len=1, data=AUTHORIZED(2)
+    // Checksum = sum of all bytes (from 'I') mod 256
+    // Sum: 0x49+0x4D+0x50+0x52+0x4F+0x56+0x01+0x01+0x01+0x02 = 482 → 482%256 = 226 = 0xE2
+    const uint8_t pkt[] = {0x49,0x4D,0x50,0x52,0x4F,0x56, 0x01, 0x01, 0x01, 0x02, 0xE2, 0x0A};
+    Serial.write(pkt, sizeof(pkt));
+    Serial.flush();
+}
+
+// ─── Step 1: call immediately after Serial.begin(), before LittleFS ──────────
+// Creates the ImprovWiFi object, sends an immediate CURRENT_STATE broadcast,
+// and processes any REQUEST_CURRENT_STATE already in the serial buffer.
+inline void improvEarlyInit(const char* firmwareVersion)
+{
+    s_improv = new ImprovWiFi(&Serial);
+    s_improv->setDeviceInfo(
         ImprovTypes::ChipFamily::CF_ESP32_C3,
         "ESP32-C3-Semaphore",
         firmwareVersion ? firmwareVersion : "unknown",
         "ESP32-C3 Semaphore"
     );
-    improv.setCustomConnectWiFi(improvConnectWifi);
+    s_improv->setCustomConnectWiFi(improvConnectWifi);
 
-    // Lightweight console buffer — full SerialConsole not used here to avoid
-    // printing the banner before Improv initialises (confuses the Web Installer).
+    // Immediately broadcast current state so the web installer detects us
+    // without waiting for the library's internal timer.
+    improvSendCurrentState();
+
+    // Also handle any bytes already in the buffer (REQUEST_CURRENT_STATE
+    // that arrived during USB re-enumeration before setup() started).
+    s_improv->handleSerial();
+}
+
+// ─── Step 2: call after LittleFS check, only when wifi.json is absent ────────
+// Blocking loop — never returns. Saves wifi.json and reboots on success.
+// Serial console is available for non-Improv bytes (first byte != 0x49).
+inline void improvRun(const char* firmwareVersion)
+{
+    Serial.println("[Improv] No WiFi config — entering Improv setup");
+
+    // Re-broadcast current state now that we are fully in the Improv loop.
+    improvSendCurrentState();
+
     String consoleBuf;
 
     while (!s_improvProvisioned) {
         if (Serial.available() && Serial.peek() != 0x49) {
-            // Non-Improv byte — handle as serial console input
+            // Non-Improv byte → lightweight serial console
             char c = Serial.read();
             if (c == '\r') {
-                // ignore
             } else if (c == '\n') {
                 Serial.println();
                 consoleBuf.trim();
@@ -66,7 +91,7 @@ inline void runImprovSetup(const char* firmwareVersion)
                     if (consoleBuf == "help") {
                         Serial.println("RST: status  — device info");
                         Serial.println("RST: reboot  — restart device");
-                        Serial.println("RST: (other serial commands available after WiFi setup)");
+                        Serial.println("RST: (full console available after WiFi setup)");
                     } else if (consoleBuf == "status") {
                         Serial.printf("RST: Version : %s\n", firmwareVersion);
                         Serial.printf("RST: Heap    : %u bytes\n", ESP.getFreeHeap());
@@ -77,7 +102,7 @@ inline void runImprovSetup(const char* firmwareVersion)
                         delay(200);
                         ESP.restart();
                     } else {
-                        Serial.printf("RST: Unknown command (WiFi not configured yet)\n");
+                        Serial.println("RST: Unknown command (WiFi not configured yet)");
                     }
                     consoleBuf = "";
                 }
@@ -92,7 +117,7 @@ inline void runImprovSetup(const char* firmwareVersion)
                 Serial.print(c);
             }
         } else {
-            improv.handleSerial();
+            s_improv->handleSerial();
         }
         delay(1);
     }

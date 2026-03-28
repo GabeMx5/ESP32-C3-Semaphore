@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.27"
+#define FIRMWARE_VERSION "0.7.28"
 
 #include <WiFi.h>
 // forward declaration
@@ -789,6 +789,11 @@ void setupWebServer()
 void setup()
 {
     Serial.begin(115200);
+#ifdef IMPROV_ENABLED
+    // Early init: create Improv object and broadcast CURRENT_STATE immediately
+    // so the web installer can detect the device before LittleFS is mounted.
+    improvEarlyInit(FIRMWARE_VERSION);
+#endif
     if (!LittleFS.begin(true))
     {
         Serial.println("LittleFS mount failed");
@@ -796,7 +801,7 @@ void setup()
     }
 #ifdef IMPROV_ENABLED
     if (!LittleFS.exists("/wifi.json"))
-        runImprovSetup(FIRMWARE_VERSION);
+        improvRun(FIRMWARE_VERSION);
 #endif
 
     monitorController.begin();
