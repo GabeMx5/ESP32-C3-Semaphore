@@ -129,6 +129,28 @@ static void improvFeedAndProcess(const char* fwName, const char* fwVer) {
                 // REQUEST_DEVICE_INFORMATION
                 improvSendDeviceInfo(fwName, fwVer);
 
+            } else if (cmd == 0x04) {
+                // REQUEST_WIFI_NETWORKS — scan and return one RPC_RESULT per network
+                WiFi.mode(WIFI_STA);
+                int n = WiFi.scanNetworks(); // blocking ~2-4 s
+                if (n < 0) n = 0;
+                uint8_t pkt[64];
+                for (int i = 0; i < n; i++) {
+                    int p = 0;
+                    pkt[p++] = 0x04; // responding to cmd 0x04
+                    p = s_improvAppend(pkt, p, WiFi.SSID(i).c_str());
+                    char rssi[8];
+                    snprintf(rssi, sizeof(rssi), "%d", WiFi.RSSI(i));
+                    p = s_improvAppend(pkt, p, rssi);
+                    p = s_improvAppend(pkt, p,
+                        WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "YES" : "NO");
+                    improvSendPacket(0x04, pkt, (uint8_t)p);
+                }
+                WiFi.scanDelete();
+                // End-of-list marker: cmd only, no strings
+                const uint8_t eol[] = {0x04};
+                improvSendPacket(0x04, eol, 1);
+
             } else if (cmd == 0x01 && dataLen >= 2) {
                 // SEND_WIFI_SETTINGS: d = [cmd, ssidLen, ssid..., pwdLen, pwd...]
                 uint8_t ssidLen = d[1];
