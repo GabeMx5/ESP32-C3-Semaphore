@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.8.0"
+#define FIRMWARE_VERSION "0.8.1"
 
 #include <WiFi.h>
 // forward declaration
@@ -21,6 +21,7 @@ static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor,
 #include "geoController.h"
 #include "otaController.h"
 #include "serialConsole.h"
+#include "alexaController.h"
 #ifdef IMPROV_ENABLED
 #include "improvController.h"
 #endif
@@ -37,6 +38,7 @@ ConfigController configController;
 GeoController    geoController;
 OTAController    otaController;
 SerialConsole    serialConsole(wifiManager, mqttController, FIRMWARE_VERSION);
+AlexaController  alexaController;
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -895,6 +897,11 @@ void setup()
     geoController.begin(configController.getLatitude(), configController.getLongitude());
     configTzTime(wifiManager.timezone.c_str(), wifiManager.ntpServer.c_str());
     MDNS.begin(wifiManager.deviceName.c_str());
+    alexaController.begin(webServer, ledController);
+    alexaController.onChanged = []() {
+        broadcastLedStatus();
+        configController.markDirty();
+    };
     setupWebServer();
     mqttController.connectedHandler = []()
     {
@@ -943,6 +950,7 @@ void setup()
 void loop()
 {
     ArduinoOTA.handle();
+    alexaController.loop();
     networkManager.handleFallbackLogic();
     monitorController.loop();
     ledController.update();

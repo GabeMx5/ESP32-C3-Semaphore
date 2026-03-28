@@ -80,6 +80,7 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 - **Automatic OTA rollback**: if the new firmware crashes before completing setup, the bootloader automatically reverts to the previous firmware on next boot
 - **HTTP POST `/cmd`**: accepts the same JSON commands as WebSocket, useful for scripting or external integrations
 - **MQTT** optional with Home Assistant auto-discovery support
+- **Alexa** local-network voice control via Philips Hue Bridge emulation — no cloud account required (say "Alexa, turn on Semaphore top")
 
 ### Serial Console
 
@@ -199,6 +200,25 @@ The device automatically publishes discovery topics for Home Assistant:
 - **Sensors**: temperature (°C), humidity (%), weather condition (text) — updated every 30 minutes; PM2.5, PM10, NO₂ (µg/m³) — updated every 30 minutes; RSSI (dBm) — updated every 60 seconds
 
 Command topic: `{topicPrefix}/cmd` (JSON format, same protocol as WebSocket).
+
+---
+
+## Alexa
+
+The device emulates a **Philips Hue Bridge** on the local network so Alexa can discover and control each LED without any cloud account or external service.
+
+| Alexa device name | LED |
+|---|---|
+| "Semaphore top" | LED 2 (top) |
+| "Semaphore middle" | LED 1 (middle) |
+| "Semaphore bottom" | LED 0 (bottom) |
+
+Example voice commands:
+- "Alexa, turn on Semaphore top"
+- "Alexa, set Semaphore middle to red"
+- "Alexa, dim Semaphore bottom to 50%"
+
+Discovery works automatically on the local network via UPnP/SSDP — just say "Alexa, discover devices". No hub, no cloud account, no skill required.
 
 ---
 
