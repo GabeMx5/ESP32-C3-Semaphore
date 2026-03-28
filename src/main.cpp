@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.7.26"
+#define FIRMWARE_VERSION "0.7.27"
 
 #include <WiFi.h>
 // forward declaration
@@ -789,7 +789,6 @@ void setupWebServer()
 void setup()
 {
     Serial.begin(115200);
-    delay(200);
     if (!LittleFS.begin(true))
     {
         Serial.println("LittleFS mount failed");

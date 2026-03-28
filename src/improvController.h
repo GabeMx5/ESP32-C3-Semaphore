@@ -37,13 +37,6 @@ static bool improvConnectWifi(const char* ssid, const char* pwd) {
 //
 inline void runImprovSetup(const char* firmwareVersion)
 {
-    // With ARDUINO_USB_CDC_ON_BOOT the USB port reappears shortly after reboot.
-    // Wait up to 5 s for a host connection so the web installer can reconnect
-    // before we start broadcasting Improv state.
-    unsigned long t = millis();
-    while (!Serial && millis() - t < 5000) delay(10);
-    delay(500); // extra settling time after connection
-
     Serial.println("[Improv] No WiFi config — entering Improv setup");
 
     ImprovWiFi improv(&Serial);
