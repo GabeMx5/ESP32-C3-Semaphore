@@ -116,8 +116,15 @@ inline void improvRun(const char* firmwareVersion)
                 consoleBuf += c;
                 Serial.print(c);
             }
-        } else {
+        } else if (Serial.available()) {
+            // Improv packet incoming (first byte == 0x49).
+            // Immediately send CURRENT_STATE so the web installer's read loop
+            // receives it before timing out, then let the library process the
+            // full packet (needed for SEND_WIFI_SETTINGS / connect flow).
+            improvSendCurrentState();
             s_improv->handleSerial();
+        } else {
+            s_improv->handleSerial(); // periodic broadcasts / idle tick
         }
         delay(1);
     }
