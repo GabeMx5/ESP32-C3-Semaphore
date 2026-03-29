@@ -176,7 +176,7 @@ System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address,
 ### CON Tab
 ![CON](screenshots/con_v0.9.png)
 
-Browser-based serial console. Mirrors the complete USB serial output (WiFi events, OTA progress, MQTT, command responses) in real time via WebSocket. Supports the same commands as the USB serial console, with Up/Down arrow history navigation.
+Browser-based serial console. Mirrors the complete USB serial output (WiFi events, OTA progress, MQTT, command responses) in real time via WebSocket. Supports the same commands as the USB serial console, with Up/Down arrow history navigation. Command history is persisted in IndexedDB and survives page reloads.
 
 Weather data is displayed when a location is configured:
 - **Weather** — current condition label and WMO code, with a colored dot reflecting the condition color

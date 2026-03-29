@@ -1295,6 +1295,38 @@ function onOtaProgress(step, pct) {
 let consoleHistory = [];
 let consoleHistoryIndex = -1;
 
+// IndexedDB helpers — store history as a single array under key "history"
+let _consoleDB = null;
+
+function _openConsoleDB() {
+  if (_consoleDB) return Promise.resolve(_consoleDB);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("semaphore-console", 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore("history");
+    req.onsuccess = e => { _consoleDB = e.target.result; resolve(_consoleDB); };
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+function _loadConsoleHistory() {
+  return _openConsoleDB().then(db => new Promise(resolve => {
+    const req = db.transaction("history", "readonly")
+                  .objectStore("history").get("cmds");
+    req.onsuccess = e => resolve(Array.isArray(e.target.result) ? e.target.result : []);
+    req.onerror   = ()  => resolve([]);
+  })).catch(() => []);
+}
+
+function _saveConsoleHistory() {
+  _openConsoleDB().then(db => {
+    const tx = db.transaction("history", "readwrite");
+    tx.objectStore("history").put(consoleHistory, "cmds");
+  }).catch(() => {});
+}
+
+// Load persisted history on startup
+_loadConsoleHistory().then(h => { consoleHistory = h; });
+
 function appendConsoleLine(text) {
   const out = document.getElementById("consoleOutput");
   if (!out) return;
@@ -1314,6 +1346,7 @@ function consoleSend() {
   if (consoleHistory.length > 50) consoleHistory.pop();
   consoleHistoryIndex = -1;
   input.value = "";
+  _saveConsoleHistory();
   wsSend({ type: "consoleCmd", cmd });
 }
 

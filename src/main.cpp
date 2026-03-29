@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.9.0"
+#define FIRMWARE_VERSION "0.9.1"
 
 // Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
