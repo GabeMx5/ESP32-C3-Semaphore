@@ -1,11 +1,15 @@
 #pragma once
 #include <Arduino.h>
 #include <WiFi.h>
+#include <functional>
 #include "wifiConfigManager.h"
 #include "mqttController.h"
 
 class SerialConsole {
 public:
+    // Optional callback: called for every output line (without "RST: " prefix/newline)
+    std::function<void(const String&)> onOutput;
+
     SerialConsole(WiFiConfigManager& wifi, MQTTController& mqtt, const char* firmwareVersion)
         : _wifi(wifi), _mqtt(mqtt), _version(firmwareVersion) {}
 
@@ -38,6 +42,15 @@ public:
         }
     }
 
+    // Execute a command from the web console (echoes it and runs it)
+    void executeFromWeb(const String& cmd) {
+        String line = cmd;
+        line.trim();
+        if (line.length() == 0) return;
+        _raw(String("> ") + line);
+        _process(line);
+    }
+
 private:
     WiFiConfigManager& _wifi;
     MQTTController&    _mqtt;
@@ -54,7 +67,23 @@ private:
         return i < 0 ? "" : line.substring(i + 1);
     }
 
-    void _print(const String& s) { Serial.printf("RST: %s\n", s.c_str()); }
+    // Output a line to Serial and invoke onOutput callback
+    void _raw(const String& s) {
+        Serial.printf("RST: %s\n", s.c_str());
+        if (onOutput) onOutput(s);
+    }
+
+    // Printf-style output routed through _raw
+    void _rawf(const char* fmt, ...) {
+        char buf[256];
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(buf, sizeof(buf), fmt, args);
+        va_end(args);
+        _raw(String(buf));
+    }
+
+    void _print(const String& s) { _raw(s); }
 
     // Save wifi config using current runtime values (helper to avoid repetition)
     void _saveWifi() {
@@ -98,13 +127,13 @@ private:
             _print("  mqtt enable|disable     — enable/disable MQTT");
 
         } else if (cmd == "status") {
-            Serial.printf("RST: Version  : %s\n", _version);
-            Serial.printf("RST: IP       : %s\n", WiFi.localIP().toString().c_str());
-            Serial.printf("RST: SSID     : %s\n", WiFi.SSID().c_str());
-            Serial.printf("RST: RSSI     : %d dBm\n", WiFi.RSSI());
-            Serial.printf("RST: Hostname : %s.local\n", _wifi.deviceName.c_str());
-            Serial.printf("RST: Heap     : %u bytes\n", ESP.getFreeHeap());
-            Serial.printf("RST: Uptime   : %lu s\n", millis() / 1000);
+            _rawf("Version  : %s", _version);
+            _rawf("IP       : %s", WiFi.localIP().toString().c_str());
+            _rawf("SSID     : %s", WiFi.SSID().c_str());
+            _rawf("RSSI     : %d dBm", WiFi.RSSI());
+            _rawf("Hostname : %s.local", _wifi.deviceName.c_str());
+            _rawf("Heap     : %u bytes", ESP.getFreeHeap());
+            _rawf("Uptime   : %lu s", millis() / 1000);
 
         } else if (cmd == "version") {
             _print(_version);
@@ -113,13 +142,13 @@ private:
             _print(WiFi.localIP().toString());
 
         } else if (cmd == "rssi") {
-            Serial.printf("RST: %d dBm\n", WiFi.RSSI());
+            _rawf("%d dBm", WiFi.RSSI());
 
         } else if (cmd == "heap") {
-            Serial.printf("RST: %u bytes\n", ESP.getFreeHeap());
+            _rawf("%u bytes", ESP.getFreeHeap());
 
         } else if (cmd == "uptime") {
-            Serial.printf("RST: %lu s\n", millis() / 1000);
+            _rawf("%lu s", millis() / 1000);
 
         } else if (cmd == "ssid") {
             if (arg.isEmpty()) {
@@ -141,7 +170,7 @@ private:
 
         } else if (cmd == "hostname") {
             if (arg.isEmpty()) {
-                Serial.printf("%s.local\n", _wifi.deviceName.c_str());
+                _rawf("%s.local", _wifi.deviceName.c_str());
             } else {
                 _wifi.deviceName = arg;
                 _saveWifi();
@@ -221,13 +250,13 @@ private:
 
             if (sub.isEmpty()) {
                 // Show MQTT config
-                Serial.printf("RST: Enabled  : %s\n", _mqtt.getEnabled() ? "yes" : "no");
-                Serial.printf("RST: Connected : %s\n", _mqtt.isConnected() ? "yes" : "no");
-                Serial.printf("RST: Broker    : %s\n", _mqtt.getBroker().c_str());
-                Serial.printf("RST: Port      : %d\n", _mqtt.getPort());
-                Serial.printf("RST: Username  : %s\n", _mqtt.getUsername().c_str());
-                Serial.printf("RST: Client ID : %s\n", _mqtt.getClientId().c_str());
-                Serial.printf("RST: Topic     : %s\n", _mqtt.getTopicPrefix().c_str());
+                _rawf("Enabled  : %s", _mqtt.getEnabled() ? "yes" : "no");
+                _rawf("Connected : %s", _mqtt.isConnected() ? "yes" : "no");
+                _rawf("Broker    : %s", _mqtt.getBroker().c_str());
+                _rawf("Port      : %d", _mqtt.getPort());
+                _rawf("Username  : %s", _mqtt.getUsername().c_str());
+                _rawf("Client ID : %s", _mqtt.getClientId().c_str());
+                _rawf("Topic     : %s", _mqtt.getTopicPrefix().c_str());
             } else if (sub == "broker") {
                 if (val.isEmpty()) { _print("Usage: mqtt broker <value>"); return; }
                 _mqtt.applyConfig(val, _mqtt.getPort(), _mqtt.getUsername(),
@@ -285,7 +314,7 @@ private:
                 _mqtt.saveConfig();
                 _print("MQTT disabled.");
             } else {
-                Serial.printf("Unknown mqtt subcommand: %s\n", sub.c_str());
+                _rawf("Unknown mqtt subcommand: %s", sub.c_str());
             }
 
         } else if (cmd == "reboot") {
@@ -294,7 +323,7 @@ private:
             ESP.restart();
 
         } else {
-            Serial.printf("Unknown command: %s (type 'help' for list)\n", cmd.c_str());
+            _rawf("Unknown command: %s (type 'help' for list)", cmd.c_str());
         }
     }
 };

@@ -105,6 +105,7 @@
       <button class="tab-button" onclick="openTab(event,'wifi')">WIFI</button>
       <button class="tab-button" onclick="openTab(event,'mqtt')">MQTT</button>
       <button class="tab-button" onclick="openTab(event,'info')">INFO</button>
+      <button class="tab-button" onclick="openTab(event,'console')">CON</button>
     </div>
 
     <div class="tab-viewport">
@@ -444,6 +445,16 @@
           Restore
         </button>
         <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="restoreConfig(this)">
+      </div>
+    </div>
+
+    <div id="console" class="tab-content">
+      <div id="consoleOutput" class="console-output"></div>
+      <div class="console-row">
+        <input type="text" id="consoleInput" class="console-input" placeholder="Command..."
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+               onkeydown="consoleKeyDown(event)">
+        <button class="console-send-btn" onclick="consoleSend()">Send</button>
       </div>
     </div>
 

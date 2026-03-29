@@ -82,9 +82,11 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 - **MQTT** optional with Home Assistant auto-discovery support
 - **Alexa** local-network voice control via Philips Hue Bridge emulation — no cloud account required (say "Alexa, turn on Semaphore top")
 
-### Serial Console
+### Serial Console & Web Console
 
-Interactive REPL over USB serial (115200 baud). Follows Tasmota conventions: characters are echoed as you type, backspace works, each command is shown with a `CMD:` prefix and each response line with `RST:`.
+Interactive REPL available over **USB serial** (115200 baud) and from the **CON tab** of the web UI — both interfaces share the same command set. The web console mirrors the complete serial output in real time via WebSocket (WiFi events, OTA progress, MQTT status, etc.), making it useful when USB access is inconvenient.
+
+Follows Tasmota conventions: characters are echoed as you type, backspace works, each command is shown with a `CMD:` prefix and each response line with `RST:`.
 
 ```
 > status
@@ -170,6 +172,10 @@ Configure broker, port, credentials, client ID and topic prefix. Real-time conne
 ![INFO](screenshots/INFO.png)
 
 System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel.
+
+### CON Tab
+
+Browser-based serial console. Mirrors the complete USB serial output (WiFi events, OTA progress, MQTT, command responses) in real time via WebSocket. Supports the same commands as the USB serial console, with Up/Down arrow history navigation.
 
 Weather data is displayed when a location is configured:
 - **Weather** — current condition label and WMO code, with a colored dot reflecting the condition color
@@ -314,7 +320,8 @@ pio run --target uploadfs
 │   ├── monitorController.h   # OLED display
 │   ├── otaController.h       # Firmware + filesystem update from GitHub
 │   ├── improvController.h    # Improv Wi-Fi Serial first-boot wizard
-│   └── serialConsole.h       # Serial monitor command interface
+│   ├── serialConsole.h       # Serial REPL command interface
+│   ├── teeSerial.h           # Serial interceptor — mirrors all output to web console
 ├── src_data/                 # Web UI sources (not flashed directly)
 │   ├── index.html
 │   ├── index.js

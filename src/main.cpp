@@ -1,4 +1,8 @@
-#define FIRMWARE_VERSION "0.8.4"
+#define FIRMWARE_VERSION "0.9.0"
+
+// Must be included first: intercepts all Serial output for the web console
+#include "teeSerial.h"
+TeeSerial teeSerial;
 
 #include <WiFi.h>
 // forward declaration
@@ -129,6 +133,16 @@ void broadcastRainbowStatus()
     ws.textAll(msg);
     mqttController.publish(msg);
     mqttController.publishSwitchState("rainbow", ledController.getRainbowEnabled());
+}
+
+void broadcastConsole(const String& text)
+{
+    JsonDocument doc;
+    doc["type"] = "console";
+    doc["text"] = text;
+    String msg;
+    serializeJson(doc, msg);
+    ws.textAll(msg);
 }
 
 void broadcastConfigStatus()
@@ -659,6 +673,14 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         return;
     }
 
+    if (strcmp(type, "consoleCmd") == 0)
+    {
+        String cmd = doc["cmd"] | "";
+        if (cmd.length() > 0)
+            serialConsole.executeFromWeb(cmd);
+        return;
+    }
+
     processCommand(doc);
 }
 
@@ -920,6 +942,7 @@ void setup()
                  { Serial.printf("Error[%u]\n", error); });
     ArduinoOTA.begin();
 
+    teeSerial.onLine = [](const String& s) { broadcastConsole(s); };
     serialConsole.begin();
 
     // Mark firmware as valid — cancels automatic rollback.

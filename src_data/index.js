@@ -131,6 +131,8 @@ function connect() {
       onOtaStatus(data.step);
     } else if (data.type === "otaProgress") {
       onOtaProgress(data.step, data.pct);
+    } else if (data.type === "console") {
+      appendConsoleLine(data.text);
     } else if (data.type === "status") {
       if (data.reboot) {
         document.getElementById("wifiSaveText").textContent = "Configuration saved. Rebooting...";
@@ -791,7 +793,7 @@ function updateLocationLabel() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-const TAB_ORDER = ["led", "others", "timer", "wifi", "mqtt", "info"];
+const TAB_ORDER = ["led", "others", "timer", "wifi", "mqtt", "info", "console"];
 let currentTabIndex = 0;
 
 dhcpCheckbox.addEventListener("change", updateStaticFields);
@@ -1286,6 +1288,56 @@ function onOtaProgress(step, pct) {
   const el = document.getElementById(`ota-step-${step}`);
   if (!el || !el.classList.contains("active")) return;
   el.textContent = `${OTA_STEP_LABELS[step] || step} ${pct}%`;
+}
+
+// ─── Console ──────────────────────────────────────────────────────────────────
+
+let consoleHistory = [];
+let consoleHistoryIndex = -1;
+
+function appendConsoleLine(text) {
+  const out = document.getElementById("consoleOutput");
+  if (!out) return;
+  const line = document.createElement("div");
+  line.className = "console-line" + (text.startsWith("RST: >") ? " cmd" : "");
+  line.textContent = text;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function consoleSend() {
+  const input = document.getElementById("consoleInput");
+  if (!input) return;
+  const cmd = input.value.trim();
+  if (!cmd) return;
+  consoleHistory.unshift(cmd);
+  if (consoleHistory.length > 50) consoleHistory.pop();
+  consoleHistoryIndex = -1;
+  input.value = "";
+  wsSend({ type: "consoleCmd", cmd });
+}
+
+function consoleKeyDown(e) {
+  const input = document.getElementById("consoleInput");
+  if (!input) return;
+  if (e.key === "Enter") {
+    consoleSend();
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (consoleHistoryIndex < consoleHistory.length - 1) {
+      consoleHistoryIndex++;
+      input.value = consoleHistory[consoleHistoryIndex];
+    }
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (consoleHistoryIndex > 0) {
+      consoleHistoryIndex--;
+      input.value = consoleHistory[consoleHistoryIndex];
+    } else {
+      consoleHistoryIndex = -1;
+      input.value = "";
+    }
+  }
 }
 
 function showToast(msg, type = "info") {
