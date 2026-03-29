@@ -174,6 +174,7 @@ Configure broker, port, credentials, client ID and topic prefix. Real-time conne
 System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel.
 
 ### CON Tab
+![CON](screenshots/CON.png)
 
 Browser-based serial console. Mirrors the complete USB serial output (WiFi events, OTA progress, MQTT, command responses) in real time via WebSocket. Supports the same commands as the USB serial console, with Up/Down arrow history navigation.
 
