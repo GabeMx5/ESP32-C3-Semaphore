@@ -137,12 +137,12 @@ RST: IP       : 192.168.1.42
 Accessible from a browser at `http://<ip>` or `http://semaphore.local`. Works as a Progressive Web App installable on iOS and Android.
 
 ### LED Tab
-![LED](screenshots/LED.png)
+![LED](screenshots/LED.png?v=2)
 
 Direct control of the three LEDs with color picker, ON/OFF and BLINK toggles. Real-time SVG representation of the traffic light.
 
 ### FX Tab
-![FX](screenshots/FX.png)
+![FX](screenshots/FX.png?v=2)
 
 Enable effects with configurable parameters:
 - Cycle phase durations
@@ -154,27 +154,27 @@ Enable effects with configurable parameters:
 - **Weather Color** button (enabled only when weather data is available): triggers the weather effect instantly
 
 ### TIMER Tab
-![TIMER](screenshots/TIMER.png)
+![TIMER](screenshots/TIMER.png?v=2)
 
 Add, edit and delete timers with day selection, time (HH:MM:SS), action and duration in seconds (0 = no limit). Persistent save to device.
 
 ### WIFI Tab
-![WIFI](screenshots/WIFI.png)
+![WIFI](screenshots/WIFI.png?v=2)
 
 Configure device name, NTP server, timezone, WiFi credentials and static IP. Saving restarts the device.
 
 ### MQTT Tab
-![MQTT](screenshots/MQTT.png)
+![MQTT](screenshots/MQTT.png?v=2)
 
 Configure broker, port, credentials, client ID and topic prefix. Real-time connection status.
 
 ### INFO Tab
-![INFO](screenshots/INFO.png)
+![INFO](screenshots/INFO.png?v=2)
 
 System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel.
 
 ### CON Tab
-![CON](screenshots/CON.png)
+![CON](screenshots/CON.png?v=2)
 
 Browser-based serial console. Mirrors the complete USB serial output (WiFi events, OTA progress, MQTT, command responses) in real time via WebSocket. Supports the same commands as the USB serial console, with Up/Down arrow history navigation.
 
