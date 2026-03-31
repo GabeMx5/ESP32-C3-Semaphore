@@ -16,6 +16,14 @@ After flashing, the device enters an **Improv Wi-Fi Serial** setup wizard. Enter
 
 ---
 
+## 3D Print
+
+The enclosure is available on MakerWorld:
+
+**[Smart Semaphore — a traffic light that does things](https://makerworld.com/it/models/2589746-smart-semaphore-a-traffic-light-that-does-things#profileId-2857396)**
+
+---
+
 ## Hardware
 
 | Component | Detail |
