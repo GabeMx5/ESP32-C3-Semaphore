@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.9.1"
+#define FIRMWARE_VERSION "0.9.2"
 
 // Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
@@ -26,6 +26,7 @@ static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor,
 #include "otaController.h"
 #include "serialConsole.h"
 #include "alexaController.h"
+#include "bambulabController.h"
 #ifdef IMPROV_ENABLED
 #include "improvController.h"
 #endif
@@ -43,6 +44,7 @@ GeoController    geoController;
 OTAController    otaController;
 SerialConsole    serialConsole(wifiManager, mqttController, FIRMWARE_VERSION);
 AlexaController  alexaController;
+BambuLabController bambuController;
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
@@ -172,6 +174,52 @@ void sendMqttConfig(AsyncWebSocketClient *client)
     String response;
     serializeJson(doc, response);
     client->text(response);
+}
+
+void sendBambuConfig(AsyncWebSocketClient *client)
+{
+    JsonDocument doc;
+    doc["type"]           = "bambuConfig";
+    doc["ip"]             = bambuController.getIp();
+    doc["serial"]         = bambuController.getSerial();
+    doc["accessCode"]     = bambuController.getAccessCode();
+    doc["enabled"]        = bambuController.getEnabled();
+    doc["connected"]      = bambuController.isConnected();
+    doc["state"]          = BambuLabController::stateToString(bambuController.getState());
+    doc["bambuMode"]      = bambuController.getBambuMode();
+    doc["idleTimeoutMin"] = bambuController.getIdleTimeoutMin();
+    String response;
+    serializeJson(doc, response);
+    client->text(response);
+}
+
+static unsigned long bambuIdleSince = 0;
+
+static void applyBambuLedState(BambuState s)
+{
+    // showOverlay writes directly to the strip without modifying the
+    // persistent LED state (colors[]/onState[]), so restoreAll() can recover it.
+    // r0/g0/b0 = bottom (LED 0), r1/g1/b1 = middle (LED 1), r2/g2/b2 = top (LED 2)
+    static constexpr unsigned long LONG_MS = 3600000UL * 24; // 24 h; re-applied on every state change
+    switch (s) {
+        case BambuState::RUNNING:
+            ledController.showOverlay(0, 0, 0,  255, 165, 0,  0, 0, 0, LONG_MS);
+            break;
+        case BambuState::PREPARE:
+        case BambuState::SLICING:
+        case BambuState::PAUSE:
+        case BambuState::INIT:
+        case BambuState::FAILED:
+            ledController.showOverlay(0, 0, 0,  0, 0, 0,  255, 0, 0, LONG_MS);
+            break;
+        case BambuState::IDLE:
+        case BambuState::FINISH:
+            ledController.showOverlay(0, 255, 0,  0, 0, 0,  0, 0, 0, LONG_MS);
+            break;
+        default:
+            ledController.cancelOverlay();
+            break;
+    }
 }
 
 void sendWifiConfig(AsyncWebSocketClient *client)
@@ -334,7 +382,7 @@ void applyAirQualityColor()
     aqValueToRgb(geoController.airQuality.pm2_5, 12,  35,  55,  r2, g2, b2);
     aqValueToRgb(geoController.airQuality.pm10,  20,  40,  140, r1, g1, b1);
     aqValueToRgb(geoController.airQuality.no2,   40,  100, 200, r0, g0, b0);
-    ledController.showWeatherColors(r0, g0, b0, r1, g1, b1, r2, g2, b2);
+    ledController.showOverlay(r0, g0, b0, r1, g1, b1, r2, g2, b2);
 }
 
 void applyWeatherColor()
@@ -346,7 +394,7 @@ void applyWeatherColor()
     conditionToRgb(geoController.weather.condition, geoController.weather.isDay, r2, g2, b2);
     weatherTempToRgb(geoController.weather.temperature, r1, g1, b1);
     humidityToRgb(geoController.weather.humidity, r0, g0, b0);
-    ledController.showWeatherColors(r0, g0, b0, r1, g1, b1, r2, g2, b2);
+    ledController.showOverlay(r0, g0, b0, r1, g1, b1, r2, g2, b2);
 }
 
 // ─── Command processing (shared between WebSocket and MQTT) ──────────────────
@@ -358,6 +406,7 @@ void processCommand(JsonDocument &doc)
 
     if (strcmp(type, "setLed") == 0)
     {
+        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
         int      ledIndex = doc["led"];
         uint32_t existing = ledController.getLEDColor(ledIndex);
         int er = (existing >> 16) & 0xFF;
@@ -449,6 +498,7 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "setCycle") == 0)
     {
+        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
         ledController.setCycle(
             doc["cycle"]         | false,
             doc["topLedTime"]    | ledController.getTopLedTime(),
@@ -460,6 +510,7 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "setParty") == 0)
     {
+        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
         ledController.setParty(doc["party"] | false, doc["partyMadness"] | -1);
         configController.markDirty();
         broadcastPartyStatus();
@@ -468,6 +519,7 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "setRainbow") == 0)
     {
+        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
         ledController.setRainbow(
             doc["rainbow"]          | false,
             doc["rainbowCycleTime"] | ledController.getRainbowCycleTime()
@@ -642,6 +694,42 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         return;
     }
 
+    if (strcmp(type, "getBambu") == 0)
+    {
+        sendBambuConfig(client);
+        return;
+    }
+
+    if (strcmp(type, "setBambu") == 0)
+    {
+        bambuController.applyConfig(
+            doc["ip"]         | "",
+            doc["serial"]     | "",
+            doc["accessCode"] | "",
+            doc["enabled"]    | false
+        );
+        bambuController.saveConfig();
+        client->text("{\"type\":\"status\",\"status\":\"saved\",\"message\":\"BambuLab config saved\"}");
+        return;
+    }
+
+    if (strcmp(type, "setBambuMode") == 0)
+    {
+        bool    mode    = doc["bambuMode"]      | false;
+        uint8_t timeout = doc["idleTimeoutMin"] | (uint8_t)5;
+        bambuController.setBambuMode(mode);
+        bambuController.setIdleTimeoutMin(timeout);
+        configController.setBambuMode(mode);
+        configController.setIdleTimeoutMin(timeout);
+        bambuIdleSince = 0;
+        if (mode && bambuController.isConnected())
+            applyBambuLedState(bambuController.getState());
+        else if (!mode)
+            ledController.cancelOverlay();
+        sendBambuConfig(client);
+        return;
+    }
+
     // setMqtt needs client-specific response
     if (strcmp(type, "setMqtt") == 0)
     {
@@ -697,6 +785,7 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
             broadcastRainbowStatus();
             sendWifiConfig(client);
             sendMqttConfig(client);
+            sendBambuConfig(client);
             timerController.sendTimers(client);
             broadcastConfigStatus();
             break;
@@ -764,6 +853,7 @@ void setupWebServer()
         readFile("/wifi.json",   "wifi");
         readFile("/mqtt.json",   "mqtt");
         readFile("/timers.json", "timers");
+        readFile("/bambu.json",  "bambu");
         String out;
         serializeJsonPretty(doc, out);
         AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", out);
@@ -787,6 +877,7 @@ void setupWebServer()
             writeFile("/wifi.json",   "wifi");
             writeFile("/mqtt.json",   "mqtt");
             writeFile("/timers.json", "timers");
+            writeFile("/bambu.json",  "bambu");
             Serial.println("[Backup] Restore completed.");
             request->send(200, "text/plain", "restore completed");
         },
@@ -942,6 +1033,29 @@ void setup()
                  { Serial.printf("Error[%u]\n", error); });
     ArduinoOTA.begin();
 
+    bambuController.loadConfig();
+    bambuController.setBambuMode(configController.getBambuMode());
+    bambuController.setIdleTimeoutMin(configController.getIdleTimeoutMin());
+    bambuController.onStateChange = [](BambuState state) {
+        JsonDocument doc;
+        doc["type"]      = "bambuStatus";
+        doc["state"]     = BambuLabController::stateToString(state);
+        doc["connected"] = bambuController.isConnected();
+        String msg;
+        serializeJson(doc, msg);
+        ws.textAll(msg);
+        if (bambuController.getBambuMode()) {
+            applyBambuLedState(state);
+            if (state == BambuState::IDLE || state == BambuState::FINISH) {
+                if (bambuIdleSince == 0) bambuIdleSince = millis();
+            } else {
+                bambuIdleSince = 0;
+            }
+        }
+    };
+    bambuController.begin();
+    serialConsole.setBambu(bambuController);
+
     teeSerial.onLine = [](const String& s) { broadcastConsole(s); };
     serialConsole.begin();
 
@@ -986,6 +1100,14 @@ void loop()
     static unsigned long lastRssiPublish     = 0;
     geoController.loop();
     serialConsole.loop();
+    bambuController.loop();
+    if (bambuController.getBambuMode() && bambuController.isConnected() && bambuIdleSince > 0) {
+        uint8_t mins = bambuController.getIdleTimeoutMin();
+        if (mins > 0 && millis() - bambuIdleSince >= (unsigned long)mins * 60000UL) {
+            bambuIdleSince = 0;
+            ledController.showColor(0, 0, 0, 3600000UL * 24);
+        }
+    }
     if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
     {
         lastWeatherPublish = geoController.weather.lastUpdate;

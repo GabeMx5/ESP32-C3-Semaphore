@@ -45,8 +45,8 @@ function startPing() {
   pingInterval = setInterval(() => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: "ping" }));
-    pongTimeout = setTimeout(() => { showOverlay(); ws.close(); }, 2000);
-  }, 3000);
+    pongTimeout = setTimeout(() => { showOverlay(); ws.close(); }, 5000);
+  }, 8000);
 }
 
 function stopPing() {
@@ -116,6 +116,10 @@ function connect() {
       onSysInfo(data);
     } else if (data.type === "mqttConfig") {
       onMqttConfig(data);
+    } else if (data.type === "bambuConfig") {
+      onBambuConfig(data);
+    } else if (data.type === "bambuStatus") {
+      updateBambuStatus(data.state, data.connected ?? true);
     } else if (data.type === "wifiConfig") {
       onWifiConfig(data);
     } else if (data.type === "timerConfig") {
@@ -680,6 +684,74 @@ function saveMqtt() {
   });
 }
 
+// ─── BambuLab ─────────────────────────────────────────────────────────────────
+
+const bambuModeBtn        = document.getElementById("bambuModeBtn");
+const bambuIdleTimeoutInput = document.getElementById("bambuIdleTimeout");
+
+function sendBambuMode() {
+  wsSend({
+    type:           "setBambuMode",
+    bambuMode:      bambuModeBtn.classList.contains("on"),
+    idleTimeoutMin: parseInt(bambuIdleTimeoutInput.value) || 5,
+  });
+}
+
+bambuModeBtn.addEventListener("click", () => {
+  if (bambuModeBtn.disabled) return;
+  const newState = !bambuModeBtn.classList.contains("on");
+  bambuModeBtn.classList.toggle("on", newState);
+  bambuModeBtn.textContent = newState ? "ON" : "OFF";
+  sendBambuMode();
+});
+
+bambuIdleTimeoutInput.addEventListener("change", () => {
+  if (bambuModeBtn.classList.contains("on")) sendBambuMode();
+});
+
+function onBambuConfig(data) {
+  document.getElementById("bambuEnabled").checked   = data.enabled ?? false;
+  document.getElementById("bambuIp").value          = data.ip || "";
+  document.getElementById("bambuSerial").value      = data.serial || "";
+  document.getElementById("bambuAccessCode").value  = data.accessCode || "";
+  bambuModeBtn.classList.toggle("on", data.bambuMode ?? false);
+  bambuModeBtn.textContent = (data.bambuMode) ? "ON" : "OFF";
+  bambuModeBtn.disabled = !data.connected;
+  if (data.idleTimeoutMin != null) bambuIdleTimeoutInput.value = data.idleTimeoutMin;
+  updateBambuStatus(data.state, data.connected);
+}
+
+function updateBambuStatus(state, connected) {
+  const el = document.getElementById("bambuStatus");
+  if (!el) return;
+  bambuModeBtn.disabled = !connected;
+  if (!document.getElementById("bambuEnabled").checked) {
+    el.textContent = "Disabled";
+    el.style.color = "";
+    return;
+  }
+  if (!connected) {
+    el.textContent = "Disconnected";
+    el.style.color = "#f44336";
+    return;
+  }
+  const labels = { idle: "Idle", prepare: "Preparing", running: "Printing", paused: "Paused", finished: "Finished", failed: "Failed", init: "Init", slicing: "Slicing", offline: "Offline", unknown: "—" };
+  const colors  = { idle: "var(--primary)", prepare: "#ffaa00", running: "#ffaa00", paused: "#f44336", finished: "var(--primary)", failed: "#f44336", init: "", slicing: "#ffaa00", offline: "#f44336", unknown: "" };
+  el.textContent = labels[state] || "—";
+  el.style.color = colors[state] || "";
+}
+
+function saveBambu() {
+  animateSaveIcon("saveBambuIcon");
+  wsSend({
+    type:       "setBambu",
+    enabled:    document.getElementById("bambuEnabled").checked,
+    ip:         document.getElementById("bambuIp").value,
+    serial:     document.getElementById("bambuSerial").value,
+    accessCode: document.getElementById("bambuAccessCode").value,
+  });
+}
+
 // ─── WiFi ─────────────────────────────────────────────────────────────────────
 
 const dhcpCheckbox = document.getElementById("dhcpMode");
@@ -940,6 +1012,7 @@ function openTab(evt, tabName) {
     infoRefreshTimer = setInterval(requestInfo, 1000);
   } else if (tabName === "mqtt") {
     wsSend({ type: "getMqtt" });
+    wsSend({ type: "getBambu" });
     infoRefreshTimer = setInterval(requestInfo, 1000);
   }
 }

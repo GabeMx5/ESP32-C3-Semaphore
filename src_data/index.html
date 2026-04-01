@@ -228,6 +228,16 @@
         <label class="time-label">Cycle time (s)</label>
         <input id="rainbowCycleTime" class="time-input" type="number" min="1" step="1" value="5">
       </div>
+      <hr class="section-divider">
+      <p class="section-heading">BambuLab mode</p>
+      <div class="option-row">
+        <span>Printer mode</span>
+        <button id="bambuModeBtn" class="toggle-btn off" disabled>OFF</button>
+      </div>
+      <div class="option-row">
+        <label class="time-label">Idle off (min)</label>
+        <input id="bambuIdleTimeout" class="time-input" type="number" min="0" step="1" value="5">
+      </div>
     </div>
 
     <div id="timer" class="tab-content">
@@ -379,6 +389,44 @@
           <polyline points="7 3 7 8 15 8"/>
         </svg>
         Save MQTT
+      </button>
+
+      <hr class="section-divider">
+      <p class="section-heading">BambuLab</p>
+
+      <div class="checkbox-group" style="margin-bottom: 16px;">
+        <input type="checkbox" id="bambuEnabled">
+        <label for="bambuEnabled">Enable BambuLab</label>
+      </div>
+
+      <label>Printer IP</label>
+      <input id="bambuIp" type="text" placeholder="192.168.1.x">
+
+      <label>Serial Number</label>
+      <input id="bambuSerial" type="text" placeholder="XXXXXXXXXXXXXXXX">
+
+      <label>Access Code</label>
+      <div class="password-wrapper">
+        <input id="bambuAccessCode" type="password" placeholder="••••••••">
+        <button type="button" class="eye-btn" onclick="togglePassword('bambuAccessCode', this)">
+          <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="mqtt-status">
+        Status: <span id="bambuStatus">—</span>
+      </div>
+
+      <button onclick="saveBambu()" class="save-btn">
+        <svg id="saveBambuIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save BambuLab
       </button>
     </div>
 

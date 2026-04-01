@@ -390,7 +390,7 @@ public:
     }
 
     // r0/g0/b0 = bottom LED, r1/g1/b1 = middle, r2/g2/b2 = top
-    void showWeatherColors(uint8_t r0, uint8_t g0, uint8_t b0,
+    void showOverlay(uint8_t r0, uint8_t g0, uint8_t b0,
                            uint8_t r1, uint8_t g1, uint8_t b1,
                            uint8_t r2, uint8_t g2, uint8_t b2,
                            unsigned long durationMs = 5000)
@@ -422,6 +422,11 @@ public:
     }
 
     bool isRandomYNRunning() { return randomYNState != RandomYNState::IDLE; }
+
+    void cancelOverlay() {
+        showColorRunning = false;
+        restoreNeeded    = true;
+    }
 
     // ── Guess ─────────────────────────────────────────────────────────────────
 

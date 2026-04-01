@@ -17,6 +17,9 @@ public:
     // Called with each complete output line (trimmed, without newline)
     std::function<void(const String&)> onLine;
 
+    // Temporarily disable web broadcast (physical serial is unaffected)
+    void setWebOutput(bool enabled) { _webOutput = enabled; }
+
     // ── Write ── (all output paths end here) ────────────────────────────────
     // NOTE: "Serial" below refers to the REAL hardware serial because this code
     // is compiled before the "#define Serial teeSerial" that follows the class.
@@ -24,7 +27,7 @@ public:
     size_t write(uint8_t c) override {
         size_t r = Serial.write(c);
         _buf += (char)c;
-        if (c == '\n') _flush();
+        if (c == '\n' || _buf.length() >= MAX_LINE) _flush();
         return r;
     }
 
@@ -32,7 +35,7 @@ public:
         size_t r = Serial.write(buf, size);
         for (size_t i = 0; i < size; i++) {
             _buf += (char)buf[i];
-            if (buf[i] == '\n') _flush();
+            if (buf[i] == '\n' || _buf.length() >= MAX_LINE) _flush();
         }
         return r;
     }
@@ -47,13 +50,15 @@ public:
     void begin(unsigned long baud) { Serial.begin(baud); }
 
 private:
+    static constexpr size_t MAX_LINE = 512;
     String _buf;
+    bool   _webOutput = true;
 
     void _flush() {
         String line = _buf;
         _buf = "";
         line.trim();
-        if (line.length() > 0 && onLine) onLine(line);
+        if (line.length() > 0 && onLine && _webOutput) onLine(line);
     }
 };
 

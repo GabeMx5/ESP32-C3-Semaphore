@@ -4,6 +4,7 @@
 #include <functional>
 #include "wifiConfigManager.h"
 #include "mqttController.h"
+#include "bambulabController.h"
 
 class SerialConsole {
 public:
@@ -42,6 +43,8 @@ public:
         }
     }
 
+    void setBambu(BambuLabController& b) { _bambu = &b; }
+
     // Execute a command from the web console (echoes it and runs it)
     void executeFromWeb(const String& cmd) {
         String line = cmd;
@@ -52,10 +55,11 @@ public:
     }
 
 private:
-    WiFiConfigManager& _wifi;
-    MQTTController&    _mqtt;
-    const char*        _version;
-    String             _buf;
+    WiFiConfigManager&  _wifi;
+    MQTTController&     _mqtt;
+    BambuLabController* _bambu = nullptr;
+    const char*         _version;
+    String              _buf;
 
     // Split "cmd arg" into cmd and arg
     static String _cmd(const String& line) {
@@ -125,6 +129,11 @@ private:
             _print("  mqtt clientid <value>   — set MQTT client ID");
             _print("  mqtt topic <value>      — set MQTT topic prefix");
             _print("  mqtt enable|disable     — enable/disable MQTT");
+            _print("  bambu                   — show BambuLab config and status");
+            _print("  bambu ip <value>        — set printer IP");
+            _print("  bambu serial <value>    — set printer serial number");
+            _print("  bambu code <value>      — set access code");
+            _print("  bambu enable|disable    — enable/disable BambuLab");
 
         } else if (cmd == "status") {
             _rawf("Version  : %s", _version);
@@ -315,6 +324,45 @@ private:
                 _print("MQTT disabled.");
             } else {
                 _rawf("Unknown mqtt subcommand: %s", sub.c_str());
+            }
+
+        } else if (cmd == "bambu") {
+            if (!_bambu) { _print("BambuLab not available."); return; }
+            String sub = _cmd(arg);
+            String val = _arg(arg);
+            sub.toLowerCase();
+
+            if (sub.isEmpty()) {
+                _rawf("Enabled   : %s", _bambu->getEnabled()     ? "yes" : "no");
+                _rawf("Connected : %s", _bambu->isConnected()    ? "yes" : "no");
+                _rawf("State     : %s", BambuLabController::stateToString(_bambu->getState()));
+                _rawf("IP        : %s", _bambu->getIp().c_str());
+                _rawf("Serial    : %s", _bambu->getSerial().c_str());
+            } else if (sub == "ip") {
+                if (val.isEmpty()) { _print("Usage: bambu ip <value>"); return; }
+                _bambu->applyConfig(val, _bambu->getSerial(), _bambu->getAccessCode(), _bambu->getEnabled());
+                _bambu->saveConfig();
+                _print("Printer IP saved.");
+            } else if (sub == "serial") {
+                if (val.isEmpty()) { _print("Usage: bambu serial <value>"); return; }
+                _bambu->applyConfig(_bambu->getIp(), val, _bambu->getAccessCode(), _bambu->getEnabled());
+                _bambu->saveConfig();
+                _print("Serial number saved.");
+            } else if (sub == "code") {
+                if (val.isEmpty()) { _print("Usage: bambu code <value>"); return; }
+                _bambu->applyConfig(_bambu->getIp(), _bambu->getSerial(), val, _bambu->getEnabled());
+                _bambu->saveConfig();
+                _print("Access code saved.");
+            } else if (sub == "enable") {
+                _bambu->applyConfig(_bambu->getIp(), _bambu->getSerial(), _bambu->getAccessCode(), true);
+                _bambu->saveConfig();
+                _print("BambuLab enabled.");
+            } else if (sub == "disable") {
+                _bambu->applyConfig(_bambu->getIp(), _bambu->getSerial(), _bambu->getAccessCode(), false);
+                _bambu->saveConfig();
+                _print("BambuLab disabled.");
+            } else {
+                _rawf("Unknown bambu subcommand: %s", sub.c_str());
             }
 
         } else if (cmd == "reboot") {

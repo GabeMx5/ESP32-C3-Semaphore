@@ -1085,6 +1085,23 @@ button:focus-visible {
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.4) rotate(var(--dr)); }
 }
 
+/* ─── Section divider / heading ─────────────────────────────────────────────*/
+
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0 16px;
+}
+
+.section-heading {
+  color: var(--secondary-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+}
+
 /* ─── MQTT status ────────────────────────────────────────────────────────────*/
 
 .mqtt-status {

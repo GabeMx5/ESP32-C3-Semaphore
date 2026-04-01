@@ -29,9 +29,14 @@ public:
         if (_makeChangesPersistent) _dirtyTime = millis();
     }
 
-    bool  getMakeChangesPersistent() { return _makeChangesPersistent; }
-    float getLatitude()              { return _latitude;  }
-    float getLongitude()             { return _longitude; }
+    bool    getMakeChangesPersistent() { return _makeChangesPersistent; }
+    float   getLatitude()              { return _latitude;       }
+    float   getLongitude()             { return _longitude;      }
+    bool    getBambuMode()             { return _bambuMode;      }
+    uint8_t getIdleTimeoutMin()        { return _idleTimeoutMin; }
+
+    void setBambuMode(bool v)      { _bambuMode = v;      markDirty(); }
+    void setIdleTimeoutMin(uint8_t v) { _idleTimeoutMin = v; markDirty(); }
 
     void setMakeChangesPersistent(bool value)
     {
@@ -71,6 +76,8 @@ public:
         doc["makeChangesPersistent"]  = _makeChangesPersistent;
         doc["latitude"]               = _latitude;
         doc["longitude"]              = _longitude;
+        doc["bambuMode"]              = _bambuMode;
+        doc["idleTimeoutMin"]         = _idleTimeoutMin;
         File file = LittleFS.open(CONFIG_FILE, "w");
         serializeJsonPretty(doc, file);
         file.close();
@@ -83,6 +90,8 @@ private:
     bool             _makeChangesPersistent = true;
     float            _latitude              = 0.0f;
     float            _longitude             = 0.0f;
+    bool             _bambuMode             = false;
+    uint8_t          _idleTimeoutMin        = 5;
 
     void load()
     {
@@ -113,6 +122,8 @@ private:
         _makeChangesPersistent = doc["makeChangesPersistent"] | true;
         _latitude              = doc["latitude"]              | 0.0f;
         _longitude             = doc["longitude"]             | 0.0f;
+        _bambuMode             = doc["bambuMode"]             | false;
+        _idleTimeoutMin        = doc["idleTimeoutMin"]        | (uint8_t)5;
         Serial.println("[Config] config.json loaded");
     }
 };

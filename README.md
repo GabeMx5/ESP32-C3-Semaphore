@@ -55,6 +55,7 @@ The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **b
 | **Morse Code** | Flashes all LEDs in Morse code for any text entered by the user (A–Z, spaces supported) |
 | **Weather Color** | Sets each LED to a color based on real-time weather data (see below) |
 | **Air Quality Color** | Sets each LED to a color based on real-time air quality data (PM2.5, PM10, NO₂) |
+| **BambuLab Mode** | Maps BambuLab printer state to the three LEDs in real time (see below) |
 
 Effects are mutually exclusive: enabling one automatically disables the others.
 
@@ -82,7 +83,7 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 - **WiFi** STA with DHCP or static IP; fallback to AP mode (`192.168.4.1`) after 3 failed attempts (3-minute timeout, then auto-restart)
 - **Improv Wi-Fi Serial** first-boot wizard: after flashing, configure WiFi credentials from the browser within 1 minute; after the timeout the device switches to AP mode (`192.168.4.1`) automatically
 - **mDNS** with configurable hostname (default `semaphore.local`)
-- **WebSocket** real-time with application-level ping/pong (3 s interval, 2 s timeout)
+- **WebSocket** real-time with application-level ping/pong (8 s interval, 5 s timeout)
 - **OTA** (ArduinoOTA) for wireless firmware updates from PlatformIO
 - **Firmware update from web UI**: the INFO tab allows updating firmware and filesystem directly from the latest GitHub release, with automatic config backup/restore. On every new connection the device automatically checks for available updates and shows the update prompt if a newer version is found
 - **Automatic OTA rollback**: if the new firmware crashes before completing setup, the bootloader automatically reverts to the previous firmware on next boot
@@ -133,6 +134,11 @@ RST: IP       : 192.168.1.42
 | `mqtt clientid <value>` | Set MQTT client ID |
 | `mqtt topic <value>` | Set MQTT topic prefix |
 | `mqtt enable\|disable` | Enable/disable MQTT |
+| `bambu` | Show BambuLab config and connection status |
+| `bambu ip <value>` | Set printer IP |
+| `bambu serial <value>` | Set printer serial number |
+| `bambu code <value>` | Set access code |
+| `bambu enable\|disable` | Enable/disable BambuLab |
 
 ### OLED Display
 - Shows status messages at boot and operation feedback
@@ -175,6 +181,21 @@ Configure device name, NTP server, timezone, WiFi credentials and static IP. Sav
 ![MQTT](screenshots/mqtt_v0.9.png)
 
 Configure broker, port, credentials, client ID and topic prefix. Real-time connection status.
+
+The tab also contains the **BambuLab** section: enter the printer IP, serial number and access code to connect via MQTT TLS (port 8883). The connection status and current printer state (`Idle`, `Printing`, `Preparing`, `Paused`, `Finished`, `Failed`, `Init`, `Slicing`, `Offline`) are shown in real time.
+
+### BambuLab Mode
+
+When a BambuLab printer is configured and connected, the **FX tab** exposes a **Printer mode** toggle (enabled only while connected). When active it overrides all other effects and maps the printer state to the LEDs:
+
+| Printer state | LED | Color |
+|---|---|---|
+| Printing / Failed | Top (LED 2) | Red |
+| Preparing / Pausing / Init / Slicing | Middle (LED 1) | Yellow |
+| Idle / Finished | Bottom (LED 0) | Green |
+| Unknown / Offline | — | All off |
+
+An **Idle off** timeout (configurable in minutes, 0 = disabled) turns all LEDs off after the printer has been idle or finished for that duration. The LEDs come back automatically as soon as the printer enters a new state. The mode and timeout are persisted in `/config.json` (together with the other effect settings) and are included in backup/restore. Printer credentials (IP, serial, access code) are stored separately in `/bambu.json`.
 
 ### INFO Tab
 ![INFO](screenshots/info_v0.9.png)
@@ -241,10 +262,11 @@ Discovery works automatically on the local network via UPnP/SSDP — just say "A
 
 | File | Content |
 |---|---|
-| `/config.json` | LED colors, states and effect parameters |
+| `/config.json` | LED colors, states, effect parameters, BambuLab mode and idle timeout |
 | `/wifi.json` | WiFi credentials and IP configuration |
 | `/mqtt.json` | MQTT broker configuration |
 | `/timers.json` | Timer definitions |
+| `/bambu.json` | BambuLab printer credentials (IP, serial, access code, enabled — excluded from git) |
 
 ---
 
@@ -329,6 +351,7 @@ pio run --target uploadfs
 │   ├── monitorController.h   # OLED display
 │   ├── otaController.h       # Firmware + filesystem update from GitHub
 │   ├── improvController.h    # Improv Wi-Fi Serial first-boot wizard
+│   ├── bambulabController.h  # BambuLab MQTT TLS client, state parsing, printer mode
 │   ├── serialConsole.h       # Serial REPL command interface
 │   ├── teeSerial.h           # Serial interceptor — mirrors all output to web console
 ├── src_data/                 # Web UI sources (not flashed directly)

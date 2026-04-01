@@ -51,8 +51,10 @@ public:
 
     void setLocation(float lat, float lon)
     {
-        _lat = lat;
-        _lon = lon;
+        _lat          = lat;
+        _lon          = lon;
+        _lastFetch    = 0;
+        _lastAirFetch = 0;
         weather.valid    = false;
         airQuality.valid = false;
     }
@@ -61,11 +63,14 @@ public:
     {
         if (_lat == 0.0f && _lon == 0.0f) return;
         if (WiFi.status() != WL_CONNECTED) return;
-        if (millis() - _lastFetch < GEO_UPDATE_INTERVAL_MS && _lastFetch > 0) return;
-        fetch();
-
-        if (millis() - _lastAirFetch < GEO_AQ_INTERVAL_MS && _lastAirFetch > 0) return;
-        fetchAirQuality();
+        unsigned long now = millis();
+        if (_lastFetch == 0 || now - _lastFetch >= GEO_UPDATE_INTERVAL_MS) {
+            Serial.printf("[Geo] Fetching weather (lat=%.6f lon=%.6f lastFetch=%lu)...\n", _lat, _lon, _lastFetch);
+            fetch();
+        } else if (_lastAirFetch == 0 || now - _lastAirFetch >= GEO_AQ_INTERVAL_MS) {
+            Serial.printf("[AQ] Fetching air quality (lastAirFetch=%lu)...\n", _lastAirFetch);
+            fetchAirQuality();
+        }
     }
 
 private:
@@ -76,6 +81,7 @@ private:
 
     void fetch()
     {
+        _lastFetch = millis();
         String url = "https://api.open-meteo.com/v1/forecast"
                      "?latitude="  + String(_lat, 6) +
                      "&longitude=" + String(_lon, 6) +
@@ -128,6 +134,7 @@ private:
 
     void fetchAirQuality()
     {
+        _lastAirFetch = millis();
         String url = "https://air-quality-api.open-meteo.com/v1/air-quality"
                      "?latitude="  + String(_lat, 6) +
                      "&longitude=" + String(_lon, 6) +

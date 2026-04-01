@@ -4,11 +4,12 @@
 .vscode/launch.json
 .vscode/ipch
 
-# Sensitive config files (use *.example.json as template)
+# Sensitive config files
 data/wifi.json
 data/mqtt.json
 data/config.json
 data/timers.json
+data/bambu.json
 
 # Generated gzip assets (built by compress_web.py from src_data/)
 data/*.gz
