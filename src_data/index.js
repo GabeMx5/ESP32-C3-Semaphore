@@ -540,11 +540,13 @@ function onSysInfo(data) {
   document.getElementById("infoDatetime").textContent = data.datetime || "—";
   document.getElementById("infoUptime").textContent   = data.uptime != null ? formatUptime(data.uptime) : "—";
   const bambuIdleRow = document.getElementById("bambuIdleRow");
-  if (data.bambuIdleSec != null && data.bambuIdleSec >= 0) {
-    bambuIdleRow.style.display = "";
-    document.getElementById("infoBambuIdle").textContent = formatUptime(data.bambuIdleSec);
-  } else {
-    bambuIdleRow.style.display = "none";
+  if (bambuIdleRow) {
+    if (data.bambuIdleSec != null && data.bambuIdleSec >= 0) {
+      bambuIdleRow.style.display = "";
+      document.getElementById("infoBambuIdle").textContent = formatUptime(data.bambuIdleSec);
+    } else {
+      bambuIdleRow.style.display = "none";
+    }
   }
   document.getElementById("infoHeap").textContent   = data.freeHeap != null ? `${(data.freeHeap / 1024).toFixed(1)} KB` : "—";
   const mqttEl = document.getElementById("infoMqtt");
