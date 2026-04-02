@@ -200,7 +200,7 @@ An **Idle off** timeout (configurable in minutes, 0 = disabled) turns all LEDs o
 ### INFO Tab
 ![INFO](screenshots/info_v0.9.png)
 
-System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel.
+System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel. When BambuLab is configured, two additional rows appear: **BambuLab** (Connected / Disconnected) and **Bambu idle** (time spent in Idle or Finished state, visible whenever the printer is connected).
 
 ### CON Tab
 ![CON](screenshots/con_v0.9.png)

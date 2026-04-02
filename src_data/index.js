@@ -539,11 +539,17 @@ function onSysInfo(data) {
   document.getElementById("infoRssi").textContent   = data.rssi != null ? `${data.rssi} dBm` : "—";
   document.getElementById("infoDatetime").textContent = data.datetime || "—";
   document.getElementById("infoUptime").textContent   = data.uptime != null ? formatUptime(data.uptime) : "—";
+  const bambuConnectedEl = document.getElementById("infoBambuConnected");
+  if (bambuConnectedEl) {
+    bambuConnectedEl.textContent = data.bambuConnected ? "Connected" : "Disconnected";
+    bambuConnectedEl.style.color = data.bambuConnected ? "var(--primary)" : "#f44336";
+  }
   const bambuIdleRow = document.getElementById("bambuIdleRow");
   if (bambuIdleRow) {
-    if (data.bambuIdleSec != null && data.bambuIdleSec >= 0) {
+    if (data.bambuConnected) {
       bambuIdleRow.style.display = "";
-      document.getElementById("infoBambuIdle").textContent = formatUptime(data.bambuIdleSec);
+      document.getElementById("infoBambuIdle").textContent =
+        (data.bambuIdleSec != null && data.bambuIdleSec >= 0) ? formatUptime(data.bambuIdleSec) : "—";
     } else {
       bambuIdleRow.style.display = "none";
     }

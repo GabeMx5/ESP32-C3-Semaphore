@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.9.5"
+#define FIRMWARE_VERSION "0.9.7"
 
 // Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
@@ -260,8 +260,9 @@ void sendSysInfo(AsyncWebSocketClient *client)
         doc["datetime"] = buf;
     }
     doc["uptime"]        = millis() / 1000;
-    doc["bambuIdleSec"]  = (bambuController.getBambuMode() && bambuIdleSince > 0)
-                           ? (millis() - bambuIdleSince) / 1000 : -1;
+    doc["bambuConnected"] = bambuController.isConnected();
+    doc["bambuIdleSec"]   = (bambuController.isConnected() && bambuIdleSince > 0)
+                            ? (long)((millis() - bambuIdleSince) / 1000) : -1L;
     doc["mqttConnected"] = mqttController.isConnected();
     doc["mqttBroker"]    = mqttController.getBroker();
     doc["mac"]           = WiFi.macAddress();
@@ -1068,13 +1069,13 @@ void setup()
         String msg;
         serializeJson(doc, msg);
         ws.textAll(msg);
+        if (state == BambuState::IDLE || state == BambuState::FINISH) {
+            if (bambuIdleSince == 0) bambuIdleSince = millis();
+        } else {
+            bambuIdleSince = 0;
+        }
         if (bambuController.getBambuMode()) {
             applyBambuLedState(state);
-            if (state == BambuState::IDLE || state == BambuState::FINISH) {
-                if (bambuIdleSince == 0) bambuIdleSince = millis();
-            } else {
-                bambuIdleSince = 0;
-            }
         }
     };
     bambuController.begin();
