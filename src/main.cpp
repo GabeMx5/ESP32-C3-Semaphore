@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.9.7"
+#define FIRMWARE_VERSION "0.9.8"
 
 // Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
@@ -193,7 +193,8 @@ void sendBambuConfig(AsyncWebSocketClient *client)
     client->text(response);
 }
 
-static unsigned long bambuIdleSince = 0;
+static unsigned long bambuIdleSince   = 0;
+static bool          bambuIdleLedOff  = false;
 
 static void applyBambuLedState(BambuState s)
 {
@@ -261,7 +262,7 @@ void sendSysInfo(AsyncWebSocketClient *client)
     }
     doc["uptime"]        = millis() / 1000;
     doc["bambuConnected"] = bambuController.isConnected();
-    doc["bambuIdleSec"]   = (bambuController.isConnected() && bambuIdleSince > 0)
+    doc["bambuIdleSec"]   = (bambuIdleSince > 0)
                             ? (long)((millis() - bambuIdleSince) / 1000) : -1L;
     doc["mqttConnected"] = mqttController.isConnected();
     doc["mqttBroker"]    = mqttController.getBroker();
@@ -724,7 +725,8 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         bambuController.setIdleTimeoutMin(timeout);
         configController.setBambuMode(mode);
         configController.setIdleTimeoutMin(timeout);
-        bambuIdleSince = 0;
+        bambuIdleSince  = 0;
+        bambuIdleLedOff = false;
         if (mode && bambuController.isConnected()) {
             BambuState cur = bambuController.getState();
             applyBambuLedState(cur);
@@ -988,7 +990,8 @@ void setup()
     timerController.onBambuMode = [](bool on) {
         bambuController.setBambuMode(on);
         configController.setBambuMode(on);
-        bambuIdleSince = 0;
+        bambuIdleSince  = 0;
+        bambuIdleLedOff = false;
         if (on && bambuController.isConnected()) {
             BambuState cur = bambuController.getState();
             applyBambuLedState(cur);
@@ -1072,7 +1075,8 @@ void setup()
         if (state == BambuState::IDLE || state == BambuState::FINISH) {
             if (bambuIdleSince == 0) bambuIdleSince = millis();
         } else {
-            bambuIdleSince = 0;
+            bambuIdleSince  = 0;
+            bambuIdleLedOff = false;
         }
         if (bambuController.getBambuMode()) {
             applyBambuLedState(state);
@@ -1126,10 +1130,10 @@ void loop()
     geoController.loop();
     serialConsole.loop();
     bambuController.loop();
-    if (bambuController.getBambuMode() && bambuController.isConnected() && bambuIdleSince > 0) {
+    if (bambuController.getBambuMode() && bambuController.isConnected() && bambuIdleSince > 0 && !bambuIdleLedOff) {
         uint8_t mins = bambuController.getIdleTimeoutMin();
         if (mins > 0 && millis() - bambuIdleSince >= (unsigned long)mins * 60000UL) {
-            bambuIdleSince = 0;
+            bambuIdleLedOff = true;
             ledController.showColor(0, 0, 0, 3600000UL * 24);
         }
     }
