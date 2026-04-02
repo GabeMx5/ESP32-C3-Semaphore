@@ -9,9 +9,9 @@
 #define OTA_FW_URL  "https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/latest/download/firmware.bin"
 #define OTA_FS_URL  "https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/latest/download/filesystem.bin"
 
-static const char* OTA_KEYS[]  = { "config", "wifi", "mqtt", "timers" };
-static const char* OTA_PATHS[] = { "/config.json", "/wifi.json", "/mqtt.json", "/timers.json" };
-#define OTA_FILE_COUNT 4
+static const char* OTA_KEYS[]  = { "config", "wifi", "mqtt", "timers", "bambu" };
+static const char* OTA_PATHS[] = { "/config.json", "/wifi.json", "/mqtt.json", "/timers.json", "/bambu.json" };
+#define OTA_FILE_COUNT 5
 
 class OTAController {
 public:
