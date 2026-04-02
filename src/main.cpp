@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "0.9.3"
+#define FIRMWARE_VERSION "0.9.4"
 
 // Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
@@ -260,6 +260,8 @@ void sendSysInfo(AsyncWebSocketClient *client)
         doc["datetime"] = buf;
     }
     doc["uptime"]        = millis() / 1000;
+    doc["bambuIdleSec"]  = (bambuController.getBambuMode() && bambuIdleSince > 0)
+                           ? (millis() - bambuIdleSince) / 1000 : -1;
     doc["mqttConnected"] = mqttController.isConnected();
     doc["mqttBroker"]    = mqttController.getBroker();
     doc["mac"]           = WiFi.macAddress();
@@ -722,8 +724,12 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         configController.setBambuMode(mode);
         configController.setIdleTimeoutMin(timeout);
         bambuIdleSince = 0;
-        if (mode && bambuController.isConnected())
-            applyBambuLedState(bambuController.getState());
+        if (mode && bambuController.isConnected()) {
+            BambuState cur = bambuController.getState();
+            applyBambuLedState(cur);
+            if (cur == BambuState::IDLE || cur == BambuState::FINISH)
+                bambuIdleSince = millis();
+        }
         else if (!mode)
             ledController.cancelOverlay();
         sendBambuConfig(client);
@@ -977,6 +983,24 @@ void setup()
     };
     timerController.onWeatherColor = []() {
         applyWeatherColor();
+    };
+    timerController.onBambuMode = [](bool on) {
+        bambuController.setBambuMode(on);
+        configController.setBambuMode(on);
+        bambuIdleSince = 0;
+        if (on && bambuController.isConnected()) {
+            BambuState cur = bambuController.getState();
+            applyBambuLedState(cur);
+            if (cur == BambuState::IDLE || cur == BambuState::FINISH)
+                bambuIdleSince = millis();
+        } else if (!on) {
+            ledController.cancelOverlay();
+        }
+        JsonDocument doc;
+        doc["type"]      = "bambuConfig";
+        doc["bambuMode"] = on;
+        String msg; serializeJson(doc, msg);
+        ws.textAll(msg);
     };
     timerController.onGuess = [](int led) {
         ledController.startGuess(led);

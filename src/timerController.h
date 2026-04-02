@@ -42,6 +42,7 @@ public:
     std::function<void(const String&)> onMorse;
     std::function<void(int)>           onGuess;
     std::function<void()>              onWeatherColor;
+    std::function<void(bool)>          onBambuMode;
 
 private:
     TimerEntry entries[TIMERS_MAX];
@@ -121,6 +122,8 @@ private:
         else if (t.action == "morse"          && onMorse)         onMorse(t.morseText);
         else if (t.action == "guess"          && onGuess)         onGuess(t.guessLed);
         else if (t.action == "weather_color"  && onWeatherColor)  onWeatherColor();
+        else if (t.action == "bambu_mode_on"  && onBambuMode)     onBambuMode(true);
+        else if (t.action == "bambu_mode_off" && onBambuMode)     onBambuMode(false);
         if (t.duration > 0) {
             t._active  = true;
             t._firedAt = millis();
@@ -129,10 +132,11 @@ private:
 
     void fireOff(TimerEntry& t) {
         Serial.printf("[Timer] Duration expired id=%d action=%s\n", t.id, t.action.c_str());
-        if      (t.action == "cycle"   && onCycle)   onCycle(false);
-        else if (t.action == "party"   && onParty)   onParty(false);
-        else if (t.action == "rainbow" && onRainbow) onRainbow(false);
-        else if (onAllOff)                           onAllOff();
+        if      (t.action == "cycle"         && onCycle)     onCycle(false);
+        else if (t.action == "party"         && onParty)     onParty(false);
+        else if (t.action == "rainbow"       && onRainbow)   onRainbow(false);
+        else if (t.action == "bambu_mode_on" && onBambuMode) onBambuMode(false);
+        else if (onAllOff)                                   onAllOff();
         t._active = false;
     }
 

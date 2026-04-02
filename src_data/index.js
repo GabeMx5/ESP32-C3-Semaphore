@@ -539,6 +539,13 @@ function onSysInfo(data) {
   document.getElementById("infoRssi").textContent   = data.rssi != null ? `${data.rssi} dBm` : "—";
   document.getElementById("infoDatetime").textContent = data.datetime || "—";
   document.getElementById("infoUptime").textContent   = data.uptime != null ? formatUptime(data.uptime) : "—";
+  const bambuIdleRow = document.getElementById("bambuIdleRow");
+  if (data.bambuIdleSec != null && data.bambuIdleSec >= 0) {
+    bambuIdleRow.style.display = "";
+    document.getElementById("infoBambuIdle").textContent = formatUptime(data.bambuIdleSec);
+  } else {
+    bambuIdleRow.style.display = "none";
+  }
   document.getElementById("infoHeap").textContent   = data.freeHeap != null ? `${(data.freeHeap / 1024).toFixed(1)} KB` : "—";
   const mqttEl = document.getElementById("infoMqtt");
   if (data.mqttBroker) {
@@ -1032,7 +1039,9 @@ const TIMER_ACTIONS = [
   { value: "random_yes_no", label: "Random Yes/No"  },
   { value: "morse",         label: "Morse"          },
   { value: "guess",         label: "Guess"          },
-  { value: "weather_color", label: "Weather Color"  },
+  { value: "weather_color",  label: "Weather Color"   },
+  { value: "bambu_mode_on",  label: "Printer Mode ON"  },
+  { value: "bambu_mode_off", label: "Printer Mode OFF" },
 ];
 
 function daysSummary(days) {
@@ -1181,7 +1190,7 @@ function renderTimerCard(t) {
         ${colorRow}
         ${morseRow}
         ${guessLedRow}
-        ${!["morse","random_yes_no","guess","weather_color"].includes(t.action) ? `<div class="timer-row">
+        ${!["morse","random_yes_no","guess","weather_color","bambu_mode_on","bambu_mode_off"].includes(t.action) ? `<div class="timer-row">
           <label>Duration (s)</label>
           <input type="number" class="time-input" min="0" step="1" value="${durVal}" placeholder="0 = no limit" onchange="setTimerField(${t.id},'duration',parseInt(this.value)||0)">
         </div>` : ""}

@@ -75,7 +75,7 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 
 ### Timers
 - Up to 50 timers with weekly scheduling (Monday–Sunday)
-- Available actions: `all_off`, `led0/1/2` (with RGB color), `cycle`, `party`, `rainbow`, `random_yes_no`, `morse` (with text), `guess` (with target LED), `weather_color`
+- Available actions: `all_off`, `led0/1/2` (with RGB color), `cycle`, `party`, `rainbow`, `random_yes_no`, `morse` (with text), `guess` (with target LED), `weather_color`, `bambu_mode_on`, `bambu_mode_off`
 - **Optional duration** in seconds: when elapsed, the effect is automatically stopped (0 = no limit)
 - Execution based on RTC via NTP
 
