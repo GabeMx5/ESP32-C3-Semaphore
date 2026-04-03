@@ -17,9 +17,12 @@ class OTAController {
 public:
     std::function<void(const char*)>       onStatus;
     std::function<void(const char*, int)>  onProgress;
+    std::function<void()>                  onBeforeStart;
 
     void start()
     {
+        if (onBeforeStart) onBeforeStart();
+
         _notify("backup");
         _backupConfigs();
 

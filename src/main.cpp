@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.0.1"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
@@ -1164,6 +1164,12 @@ void setup()
     esp_ota_mark_app_valid_cancel_rollback();
     Serial.println("[OTA] Firmware validated — rollback cancelled");
 
+    otaController.onBeforeStart = []() {
+        // Disconnect BambuLab and MQTT to free their TLS/TCP heap before OTA
+        // opens its own HTTPS connections — prevents SSL memory allocation failures.
+        bambuController.applyConfig("", "", "", false);
+        mqttController.applyConfig("", 1883, "", "", "", "", false);
+    };
     otaController.onStatus = [](const char* step) {
         JsonDocument doc;
         doc["type"] = "otaStatus";
