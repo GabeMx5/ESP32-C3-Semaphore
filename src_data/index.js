@@ -725,15 +725,20 @@ bambuIdleTimeoutInput.addEventListener("change", () => {
 });
 
 function onBambuConfig(data) {
-  document.getElementById("bambuEnabled").checked   = data.enabled ?? false;
-  document.getElementById("bambuIp").value          = data.ip || "";
-  document.getElementById("bambuSerial").value      = data.serial || "";
-  document.getElementById("bambuAccessCode").value  = data.accessCode || "";
-  bambuModeBtn.classList.toggle("on", data.bambuMode ?? false);
-  bambuModeBtn.textContent = (data.bambuMode) ? "ON" : "OFF";
-  bambuModeBtn.disabled = !data.connected;
+  if (data.enabled   != null) document.getElementById("bambuEnabled").checked  = data.enabled;
+  if (data.ip        != null) document.getElementById("bambuIp").value         = data.ip;
+  if (data.serial    != null) document.getElementById("bambuSerial").value     = data.serial;
+  if (data.accessCode != null) document.getElementById("bambuAccessCode").value = data.accessCode;
+  if (data.bambuMode != null) {
+    bambuModeBtn.classList.toggle("on", data.bambuMode);
+    bambuModeBtn.textContent = data.bambuMode ? "ON" : "OFF";
+  }
   if (data.idleTimeoutMin != null) bambuIdleTimeoutInput.value = data.idleTimeoutMin;
-  updateBambuStatus(data.state, data.connected);
+  if (data.stateColors) {
+    _bambuStateColors = data.stateColors;
+    _updateBambuStateDots();
+  }
+  if (data.connected != null) updateBambuStatus(data.state, data.connected);
 }
 
 function updateBambuStatus(state, connected) {
@@ -765,6 +770,51 @@ function saveBambu() {
     serial:     document.getElementById("bambuSerial").value,
     accessCode: document.getElementById("bambuAccessCode").value,
   });
+}
+
+// ─── BambuLab state colors ─────────────────────────────────────────────────────
+
+let _bambuStateColors = {};  // { stateName: [r0,g0,b0, r1,g1,b1, r2,g2,b2] }
+
+function _bambuRgbToHex(r, g, b) {
+  return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+
+function _bambuHexToRgb(hex) {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+}
+
+function _updateBambuStateDots() {
+  const state = document.getElementById("bambuStateSelect").value;
+  const col = _bambuStateColors[state] || [0,0,0, 0,0,0, 0,0,0];
+  // col layout: [r0,g0,b0, r1,g1,b1, r2,g2,b2]  (led index = 0/1/2)
+  for (let led = 0; led <= 2; led++) {
+    const hex = _bambuRgbToHex(col[led*3], col[led*3+1], col[led*3+2]);
+    const dot    = document.getElementById(`bambuStateDot${led}`);
+    const picker = document.getElementById(`bambuStateColor${led}`);
+    if (dot)    dot.style.background = hex;
+    if (picker) picker.value = hex;
+  }
+}
+
+function onBambuStateSelect() {
+  _updateBambuStateDots();
+}
+
+function onBambuStateColorChange(led, hex) {
+  const state = document.getElementById("bambuStateSelect").value;
+  if (!_bambuStateColors[state]) _bambuStateColors[state] = [0,0,0, 0,0,0, 0,0,0];
+  const [r, g, b] = _bambuHexToRgb(hex);
+  _bambuStateColors[state][led*3]   = r;
+  _bambuStateColors[state][led*3+1] = g;
+  _bambuStateColors[state][led*3+2] = b;
+  const dot = document.getElementById(`bambuStateDot${led}`);
+  if (dot) dot.style.background = hex;
+  wsSend({ type: "setBambuStateColor", state, led, r, g, b });
 }
 
 // ─── WiFi ─────────────────────────────────────────────────────────────────────
@@ -880,7 +930,7 @@ function updateLocationLabel() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-const TAB_ORDER = ["led", "others", "timer", "wifi", "mqtt", "info", "console"];
+const TAB_ORDER = ["home", "others", "bambu", "timer", "settings", "info", "console"];
 let currentTabIndex = 0;
 
 dhcpCheckbox.addEventListener("change", updateStaticFields);
@@ -890,7 +940,7 @@ wrapNumberInputs();
 // Restore last active tab, then set indicator without transition
 (function initTabIndicator() {
   const savedTab = localStorage.getItem("activeTab");
-  if (savedTab && TAB_ORDER.includes(savedTab) && savedTab !== "led") {
+  if (savedTab && TAB_ORDER.includes(savedTab) && savedTab !== "home") {
     const btn = document.querySelector(`.tab-button[onclick*="'${savedTab}'"]`);
     if (btn) {
       document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
@@ -898,7 +948,7 @@ wrapNumberInputs();
       document.getElementById(savedTab)?.classList.add("active");
       btn.classList.add("active");
       currentTabIndex = TAB_ORDER.indexOf(savedTab);
-      if (savedTab === "info" || savedTab === "mqtt") {
+      if (savedTab === "info" || savedTab === "settings") {
         requestInfo();
         infoRefreshTimer = setInterval(requestInfo, 1000);
       }
@@ -1025,7 +1075,7 @@ function openTab(evt, tabName) {
   if (tabName === "info") {
     requestInfo();
     infoRefreshTimer = setInterval(requestInfo, 1000);
-  } else if (tabName === "mqtt") {
+  } else if (tabName === "settings") {
     wsSend({ type: "getMqtt" });
     wsSend({ type: "getBambu" });
     infoRefreshTimer = setInterval(requestInfo, 1000);

@@ -392,17 +392,23 @@ body {
 
 .tab-button {
   flex: 1;
-  padding: 9px 4px;
+  padding: 8px 4px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 500;
   color: var(--secondary-text);
   border-radius: 8px;
   transition: color 0.15s, background 0.15s;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 0px;
+}
+
+.tab-button svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 @media (hover: hover) {
@@ -826,7 +832,7 @@ button:focus-visible {
 
 /* ─── LED tab ────────────────────────────────────────────────────────────────*/
 
-#led.tab-content.active {
+#home.tab-content.active {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1094,12 +1100,12 @@ button:focus-visible {
 }
 
 .section-heading {
-  color: var(--secondary-text);
+  color: var(--primary);
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin: 0 0 14px;
+  margin: 14px 0 14px;
 }
 
 /* ─── MQTT status ────────────────────────────────────────────────────────────*/
@@ -1142,6 +1148,27 @@ button:focus-visible {
   border-radius: 50%;
   background: transparent;
   flex-shrink: 0;
+}
+
+.weather-dot[style*="cursor"] {
+  box-shadow: 0 0 0 2px var(--border);
+  transition: box-shadow 0.15s;
+  width: 28px;
+  height: 28px;
+  margin: 2px;
+}
+
+.weather-dot[style*="cursor"]:hover {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.bambuStateColorPicker {
+  opacity: 0;
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
 }
 
 /* ─── Footer ─────────────────────────────────────────────────────────────────*/

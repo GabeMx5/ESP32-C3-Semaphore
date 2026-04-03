@@ -1,14 +1,10 @@
-#define FIRMWARE_VERSION "0.9.9"
+#define FIRMWARE_VERSION "1.0.0"
 
-// Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
 TeeSerial teeSerial;
-
 #include <vector>
+#include <esp_log.h>
 #include <WiFi.h>
-// forward declaration
-static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor,
-                         uint8_t& r, uint8_t& g, uint8_t& b);
 #include <ESPmDNS.h>
 #include <esp_ota_ops.h>
 #include <ESPAsyncWebServer.h>
@@ -50,6 +46,7 @@ BambuLabController bambuController;
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB);
 void conditionToRgb(WeatherCondition cond, bool isDay, uint8_t& r, uint8_t& g, uint8_t& b);
 void humidityToRgb(float humidity, uint8_t& r, uint8_t& g, uint8_t& b);
+static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor, uint8_t& r, uint8_t& g, uint8_t& b);
 
 static const char* conditionToString(WeatherCondition c)
 {
@@ -138,20 +135,6 @@ void broadcastRainbowStatus()
     mqttController.publishSwitchState("rainbow", ledController.getRainbowEnabled());
 }
 
-// Console messages are queued and drained one per loop() tick to avoid
-// flooding the AsyncWebSocket send buffer when many lines arrive at once.
-static std::vector<String> _consoleQueue;
-
-void broadcastConsole(const String& text)
-{
-    JsonDocument doc;
-    doc["type"] = "console";
-    doc["text"] = text;
-    String msg;
-    serializeJson(doc, msg);
-    _consoleQueue.push_back(msg);
-}
-
 void broadcastConfigStatus()
 {
     JsonDocument doc;
@@ -193,39 +176,39 @@ void sendBambuConfig(AsyncWebSocketClient *client)
     doc["state"]          = BambuLabController::stateToString(bambuController.getState());
     doc["bambuMode"]      = bambuController.getBambuMode();
     doc["idleTimeoutMin"] = bambuController.getIdleTimeoutMin();
+    bambuController.addStateColorsToJson(doc);
     String response;
     serializeJson(doc, response);
     client->text(response);
 }
 
-static unsigned long bambuIdleSince   = 0;
-static bool          bambuIdleLedOff  = false;
-
 static void applyBambuLedState(BambuState s)
 {
-    // showOverlay writes directly to the strip without modifying the
-    // persistent LED state (colors[]/onState[]), so restoreAll() can recover it.
-    // r0/g0/b0 = bottom (LED 0), r1/g1/b1 = middle (LED 1), r2/g2/b2 = top (LED 2)
-    static constexpr unsigned long LONG_MS = 3600000UL * 24; // 24 h; re-applied on every state change
-    switch (s) {
-        case BambuState::RUNNING:
-            ledController.showOverlay(0, 0, 0,  255, 165, 0,  0, 0, 0, LONG_MS);
-            break;
-        case BambuState::PREPARE:
-        case BambuState::SLICING:
-        case BambuState::PAUSE:
-        case BambuState::INIT:
-        case BambuState::FAILED:
-            ledController.showOverlay(0, 0, 0,  0, 0, 0,  255, 0, 0, LONG_MS);
-            break;
-        case BambuState::IDLE:
-        case BambuState::FINISH:
-            ledController.showOverlay(0, 255, 0,  0, 0, 0,  0, 0, 0, LONG_MS);
-            break;
-        default:
-            ledController.cancelOverlay();
-            break;
-    }
+    static constexpr unsigned long LONG_MS = 3600000UL * 24;
+    uint8_t r0, g0, b0, r1, g1, b1, r2, g2, b2;
+    bambuController.getStateColor(s, 0, r0, g0, b0);
+    bambuController.getStateColor(s, 1, r1, g1, b1);
+    bambuController.getStateColor(s, 2, r2, g2, b2);
+    if (!r0 && !g0 && !b0 && !r1 && !g1 && !b1 && !r2 && !g2 && !b2)
+        ledController.cancelOverlay();
+    else
+        ledController.showOverlay(r0, g0, b0, r1, g1, b1, r2, g2, b2, LONG_MS);
+}
+
+// Disables BambuLab printer mode and notifies all WS clients.
+// Called whenever any other effect is activated.
+static void cancelBambuMode()
+{
+    if (!bambuController.getBambuMode()) return;
+    bambuController.setBambuMode(false);
+    configController.setBambuMode(false);
+    bambuController.resetIdle();
+    ledController.cancelOverlay();
+    JsonDocument doc;
+    doc["type"]      = "bambuConfig";
+    doc["bambuMode"] = false;
+    String msg; serializeJson(doc, msg);
+    ws.textAll(msg);
 }
 
 void sendWifiConfig(AsyncWebSocketClient *client)
@@ -267,8 +250,7 @@ void sendSysInfo(AsyncWebSocketClient *client)
     }
     doc["uptime"]        = millis() / 1000;
     doc["bambuConnected"] = bambuController.isConnected();
-    doc["bambuIdleSec"]   = (bambuIdleSince > 0)
-                            ? (long)((millis() - bambuIdleSince) / 1000) : -1L;
+    doc["bambuIdleSec"]   = bambuController.getIdleSec();
     doc["mqttConnected"] = mqttController.isConnected();
     doc["mqttBroker"]    = mqttController.getBroker();
     doc["mac"]           = WiFi.macAddress();
@@ -507,9 +489,10 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "setCycle") == 0)
     {
-        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
+        bool on = doc["cycle"] | false;
+        if (on) cancelBambuMode();
         ledController.setCycle(
-            doc["cycle"]         | false,
+            on,
             doc["topLedTime"]    | ledController.getTopLedTime(),
             doc["middleLedTime"] | ledController.getMiddleLedTime(),
             doc["bottomLedTime"] | ledController.getBottomLedTime()
@@ -519,8 +502,9 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "setParty") == 0)
     {
-        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
-        ledController.setParty(doc["party"] | false, doc["partyMadness"] | -1);
+        bool on = doc["party"] | false;
+        if (on) cancelBambuMode();
+        ledController.setParty(on, doc["partyMadness"] | -1);
         configController.markDirty();
         broadcastPartyStatus();
         broadcastCycleStatus();
@@ -528,9 +512,10 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "setRainbow") == 0)
     {
-        if (bambuController.getBambuMode() && bambuController.isConnected()) return;
+        bool on = doc["rainbow"] | false;
+        if (on) cancelBambuMode();
         ledController.setRainbow(
-            doc["rainbow"]          | false,
+            on,
             doc["rainbowCycleTime"] | ledController.getRainbowCycleTime()
         );
         configController.markDirty();
@@ -540,6 +525,7 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "randomYesNo") == 0)
     {
+        cancelBambuMode();
         ledController.startRandomYesNo();
         broadcastCycleStatus();
         broadcastPartyStatus();
@@ -547,6 +533,7 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "morse") == 0)
     {
+        cancelBambuMode();
         ledController.startMorse(doc["text"] | "SOS");
         broadcastCycleStatus();
         broadcastPartyStatus();
@@ -559,12 +546,14 @@ void processCommand(JsonDocument &doc)
     }
     else if (strcmp(type, "weatherColor") == 0)
     {
+        cancelBambuMode();
         Serial.printf("[weatherColor] valid=%d temp=%.1f\n",
                       geoController.weather.valid, geoController.weather.temperature);
         applyWeatherColor();
     }
     else if (strcmp(type, "airQualityColor") == 0)
     {
+        cancelBambuMode();
         Serial.printf("[airQualityColor] valid=%d pm2_5=%.1f\n",
                       geoController.airQuality.valid, geoController.airQuality.pm2_5);
         applyAirQualityColor();
@@ -645,6 +634,7 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
 
     if (strcmp(type, "startGuess") == 0)
     {
+        cancelBambuMode();
         ledController.startGuess(doc["led"] | 0);
         broadcastCycleStatus();
         broadcastPartyStatus();
@@ -730,8 +720,7 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         bambuController.setIdleTimeoutMin(timeout);
         configController.setBambuMode(mode);
         configController.setIdleTimeoutMin(timeout);
-        bambuIdleSince  = 0;
-        bambuIdleLedOff = false;
+        bambuController.resetIdle();
         if (mode) {
             ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
             ledController.setParty(false, ledController.getPartyMadness());
@@ -743,12 +732,36 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
                 BambuState cur = bambuController.getState();
                 applyBambuLedState(cur);
                 if (cur == BambuState::IDLE || cur == BambuState::FINISH)
-                    bambuIdleSince = millis();
+                    bambuController.markIdle();
             }
         } else {
             ledController.cancelOverlay();
         }
+        {
+            JsonDocument bdoc;
+            bdoc["type"]      = "bambuConfig";
+            bdoc["bambuMode"] = mode;
+            String bmsg; serializeJson(bdoc, bmsg);
+            ws.textAll(bmsg);
+        }
         sendBambuConfig(client);
+        return;
+    }
+
+    if (strcmp(type, "setBambuStateColor") == 0)
+    {
+        const char* stateName = doc["state"] | "";
+        int     led = doc["led"] | -1;
+        uint8_t r   = doc["r"]   | 0;
+        uint8_t g   = doc["g"]   | 0;
+        uint8_t b   = doc["b"]   | 0;
+        if (led >= 0 && led <= 2) {
+            BambuState s = BambuLabController::stateFromString(stateName);
+            bambuController.setStateColor(s, led, r, g, b);
+            bambuController.saveConfig();
+            if (bambuController.getBambuMode() && bambuController.getState() == s)
+                applyBambuLedState(s);
+        }
         return;
     }
 
@@ -945,6 +958,17 @@ void setup()
     configController.begin(ledController);
     timerController.begin();
     timerController.onAllOff = []() {
+        if (bambuController.getBambuMode()) {
+            bambuController.setBambuMode(false);
+            configController.setBambuMode(false);
+            bambuController.resetIdle();
+            ledController.cancelOverlay();
+            JsonDocument bdoc;
+            bdoc["type"]      = "bambuConfig";
+            bdoc["bambuMode"] = false;
+            String bmsg; serializeJson(bdoc, bmsg);
+            ws.textAll(bmsg);
+        }
         for (int i = 0; i < LED_COUNT; i++) {
             uint32_t c = ledController.getLEDColor(i);
             ledController.setLED(i, (c>>16)&0xFF, (c>>8)&0xFF, c&0xFF, false, false);
@@ -968,6 +992,7 @@ void setup()
         broadcastRainbowStatus();
     };
     timerController.onCycle = [](bool on) {
+        if (on) cancelBambuMode();
         ledController.setCycle(on, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
         if (on) {
             ledController.setParty(false, ledController.getPartyMadness());
@@ -978,6 +1003,7 @@ void setup()
         broadcastRainbowStatus();
     };
     timerController.onParty = [](bool on) {
+        if (on) cancelBambuMode();
         ledController.setParty(on, ledController.getPartyMadness());
         if (on) {
             ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
@@ -988,6 +1014,7 @@ void setup()
         broadcastRainbowStatus();
     };
     timerController.onRainbow = [](bool on) {
+        if (on) cancelBambuMode();
         ledController.setRainbow(on, ledController.getRainbowCycleTime());
         if (on) {
             ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
@@ -998,13 +1025,13 @@ void setup()
         broadcastRainbowStatus();
     };
     timerController.onWeatherColor = []() {
+        cancelBambuMode();
         applyWeatherColor();
     };
     timerController.onBambuMode = [](bool on) {
         bambuController.setBambuMode(on);
         configController.setBambuMode(on);
-        bambuIdleSince  = 0;
-        bambuIdleLedOff = false;
+        bambuController.resetIdle();
         if (on) {
             ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
             ledController.setParty(false, ledController.getPartyMadness());
@@ -1016,7 +1043,7 @@ void setup()
                 BambuState cur = bambuController.getState();
                 applyBambuLedState(cur);
                 if (cur == BambuState::IDLE || cur == BambuState::FINISH)
-                    bambuIdleSince = millis();
+                    bambuController.markIdle();
             }
         } else {
             ledController.cancelOverlay();
@@ -1028,18 +1055,21 @@ void setup()
         ws.textAll(msg);
     };
     timerController.onGuess = [](int led) {
+        cancelBambuMode();
         ledController.startGuess(led);
         broadcastCycleStatus();
         broadcastPartyStatus();
         broadcastRainbowStatus();
     };
     timerController.onMorse = [](const String& text) {
+        cancelBambuMode();
         ledController.startMorse(text.c_str());
         broadcastCycleStatus();
         broadcastPartyStatus();
         broadcastRainbowStatus();
     };
     timerController.onRandomYesNo = []() {
+        cancelBambuMode();
         ledController.startRandomYesNo();
         broadcastCycleStatus();
         broadcastPartyStatus();
@@ -1057,6 +1087,20 @@ void setup()
     };
     networkManager.begin(wifiManager);
     geoController.begin(configController.getLatitude(), configController.getLongitude());
+    geoController.onWeatherUpdate = []() {
+        mqttController.publishWeather(
+            geoController.weather.temperature,
+            geoController.weather.humidity,
+            conditionToString(geoController.weather.condition)
+        );
+    };
+    geoController.onAirQualityUpdate = []() {
+        mqttController.publishAirQuality(
+            geoController.airQuality.pm2_5,
+            geoController.airQuality.pm10,
+            geoController.airQuality.no2
+        );
+    };
     configTzTime(wifiManager.timezone.c_str(), wifiManager.ntpServer.c_str());
     MDNS.begin(wifiManager.deviceName.c_str());
     alexaController.begin(webServer, ledController);
@@ -1094,19 +1138,24 @@ void setup()
         serializeJson(doc, msg);
         ws.textAll(msg);
         if (state == BambuState::IDLE || state == BambuState::FINISH) {
-            if (bambuIdleSince == 0) bambuIdleSince = millis();
+            bambuController.markIdle();
         } else {
-            bambuIdleSince  = 0;
-            bambuIdleLedOff = false;
+            bambuController.resetIdle();
         }
         if (bambuController.getBambuMode()) {
             applyBambuLedState(state);
         }
     };
+    bambuController.onIdleTimeout = []() {
+        ledController.showColor(0, 0, 0, 3600000UL * 24);
+    };
+    // Suppress low-level TLS error spam from the ESP32 core.
+    // BambuLab occasionally sends large records; errors are handled by
+    // our own reconnect logic and logged as "[BambuLab] connect failed".
+    esp_log_level_set("ssl_client", ESP_LOG_NONE);
     bambuController.begin();
     serialConsole.setBambu(bambuController);
 
-    teeSerial.onLine = [](const String& s) { broadcastConsole(s); };
     serialConsole.begin();
 
     // Mark firmware as valid — cancels automatic rollback.
@@ -1143,46 +1192,13 @@ void loop()
     ledController.update();
     timerController.loop();
     ws.cleanupClients();
-    if (!_consoleQueue.empty()) {
-        ws.textAll(_consoleQueue.front());
-        _consoleQueue.erase(_consoleQueue.begin());
+    {
+        String msg = teeSerial.drainOne();
+        if (msg.length()) ws.textAll(msg);
     }
     mqttController.loop();
     configController.loop();
-    static unsigned long lastWeatherPublish  = 0;
-    static unsigned long lastAirQualPublish  = 0;
-    static unsigned long lastRssiPublish     = 0;
     geoController.loop();
     serialConsole.loop();
     bambuController.loop();
-    if (bambuController.getBambuMode() && bambuController.isConnected() && bambuIdleSince > 0 && !bambuIdleLedOff) {
-        uint8_t mins = bambuController.getIdleTimeoutMin();
-        if (mins > 0 && millis() - bambuIdleSince >= (unsigned long)mins * 60000UL) {
-            bambuIdleLedOff = true;
-            ledController.showColor(0, 0, 0, 3600000UL * 24);
-        }
-    }
-    if (geoController.weather.valid && geoController.weather.lastUpdate != lastWeatherPublish)
-    {
-        lastWeatherPublish = geoController.weather.lastUpdate;
-        mqttController.publishWeather(
-            geoController.weather.temperature,
-            geoController.weather.humidity,
-            conditionToString(geoController.weather.condition)
-        );
-    }
-    if (geoController.airQuality.valid && geoController.airQuality.lastUpdate != lastAirQualPublish)
-    {
-        lastAirQualPublish = geoController.airQuality.lastUpdate;
-        mqttController.publishAirQuality(
-            geoController.airQuality.pm2_5,
-            geoController.airQuality.pm10,
-            geoController.airQuality.no2
-        );
-    }
-    if (millis() - lastRssiPublish >= 60000)
-    {
-        lastRssiPublish = millis();
-        mqttController.publishRssi(WiFi.RSSI());
-    }
 }

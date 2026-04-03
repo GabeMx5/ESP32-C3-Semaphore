@@ -4,6 +4,7 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
+#include <functional>
 
 #define GEO_UPDATE_INTERVAL_MS  1800000UL
 #define GEO_AQ_INTERVAL_MS      1800000UL
@@ -42,6 +43,9 @@ class GeoController
 public:
     WeatherData    weather;
     AirQualityData airQuality;
+
+    std::function<void()> onWeatherUpdate;
+    std::function<void()> onAirQualityUpdate;
 
     void begin(float lat, float lon)
     {
@@ -130,6 +134,7 @@ private:
 
         Serial.printf("[Geo] Weather updated: code=%d temp=%.1f condition=%d\n",
                       weather.weatherCode, weather.temperature, (int)weather.condition);
+        if (onWeatherUpdate) onWeatherUpdate();
     }
 
     void fetchAirQuality()
@@ -171,6 +176,7 @@ private:
 
         Serial.printf("[AQ] Updated: PM2.5=%.1f PM10=%.1f NO2=%.1f\n",
                       airQuality.pm2_5, airQuality.pm10, airQuality.no2);
+        if (onAirQualityUpdate) onAirQualityUpdate();
     }
 
     static WeatherCondition mapCondition(int code)

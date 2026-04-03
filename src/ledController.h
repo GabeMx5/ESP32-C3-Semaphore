@@ -399,6 +399,7 @@ public:
         partyEnabled       = false;
         rainbowEnabled     = false;
         randomYNState      = RandomYNState::IDLE;
+        restoreNeeded      = false;   // cancel any queued restore from setCycle/setParty/setRainbow(false)
         showColorRunning   = true;
         showColorRestoreAt = millis() + durationMs;
         strip.setPixelColor(0, strip.Color(r0, g0, b0));

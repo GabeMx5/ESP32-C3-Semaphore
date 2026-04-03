@@ -55,7 +55,7 @@ The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **b
 | **Morse Code** | Flashes all LEDs in Morse code for any text entered by the user (A–Z, spaces supported) |
 | **Weather Color** | Sets each LED to a color based on real-time weather data (see below) |
 | **Air Quality Color** | Sets each LED to a color based on real-time air quality data (PM2.5, PM10, NO₂) |
-| **BambuLab Mode** | Maps BambuLab printer state to the three LEDs in real time (see below) |
+| **BambuLab Mode** | Maps BambuLab printer state to the three LEDs in real time — configured from the BAMBU tab (see below) |
 
 Effects are mutually exclusive: enabling one automatically disables the others.
 
@@ -150,7 +150,9 @@ RST: IP       : 192.168.1.42
 
 Accessible from a browser at `http://<ip>` or `http://semaphore.local`. Works as a Progressive Web App installable on iOS and Android.
 
-### LED Tab
+Tab buttons are icon-only (no text labels); each button has a tooltip accessible via hover.
+
+### HOME Tab
 ![LED](screenshots/led_v0.9.png)
 
 Direct control of the three LEDs with color picker, ON/OFF and BLINK toggles. Real-time SVG representation of the traffic light.
@@ -167,26 +169,19 @@ Enable effects with configurable parameters:
 - **Morse Code** button: enter any text and all LEDs flash the message in Morse code
 - **Weather Color** button (enabled only when weather data is available): triggers the weather effect instantly
 
-### TIMER Tab
-![TIMER](screenshots/timer_v0.9.png)
+### BAMBU Tab
 
-Add, edit and delete timers with day selection, time (HH:MM:SS), action and duration in seconds (0 = no limit). Persistent save to device.
+Dedicated tab for BambuLab printer integration, split into three sections:
 
-### WIFI Tab
-![WIFI](screenshots/wifi_v0.9.png)
+**Bambulab Mode** — **Printer mode** toggle (enabled only while the printer is connected) and **Idle off (min)** input. When Printer mode is active it overrides all other effects and maps the printer state to the LEDs in real time. The idle timeout turns all LEDs off after the printer has been idle or finished for the configured number of minutes (0 = disabled).
 
-Configure device name, NTP server, timezone, WiFi credentials and static IP. Saving restarts the device.
+**State Colors** — Select a printer state from the dropdown (`Unknown`, `Idle`, `Preparing`, `Printing`, `Paused`, `Finished`, `Failed`, `Init`, `Slicing`, `Offline`) and customise the LED color for each of the three positions (Top, Middle, Bottom) by clicking the colored dot. Changes are applied and saved immediately.
 
-### MQTT Tab
-![MQTT](screenshots/mqtt_v0.9.png)
-
-Configure broker, port, credentials, client ID and topic prefix. Real-time connection status.
-
-The tab also contains the **BambuLab** section: enter the printer IP, serial number and access code to connect via MQTT TLS (port 8883). The connection status and current printer state (`Idle`, `Printing`, `Preparing`, `Paused`, `Finished`, `Failed`, `Init`, `Slicing`, `Offline`) are shown in real time.
+**Connection** — Enter the printer IP, serial number and access code (password field with show/hide toggle), then press **Save**. A status indicator shows the current connection state in real time.
 
 ### BambuLab Mode
 
-When a BambuLab printer is configured and connected, the **FX tab** exposes a **Printer mode** toggle (enabled only while connected). When active it overrides all other effects and maps the printer state to the LEDs:
+When a BambuLab printer is configured and connected, the device connects to the printer's built-in MQTT broker over TLS and subscribes to its status topic. The printer sends state updates autonomously within seconds of connecting, so the current state appears quickly without any explicit request. Enable **Printer mode** from the **BAMBU tab**. When active it overrides all other effects and maps the printer state to the LEDs:
 
 | Printer state | LED | Color |
 |---|---|---|
@@ -195,7 +190,20 @@ When a BambuLab printer is configured and connected, the **FX tab** exposes a **
 | Idle / Finished | Bottom (LED 0) | Green |
 | Unknown / Offline | — | All off |
 
-An **Idle off** timeout (configurable in minutes, 0 = disabled) turns all LEDs off after the printer has been idle or finished for that duration. The LEDs come back automatically as soon as the printer enters a new state. The mode and timeout are persisted in `/config.json` (together with the other effect settings) and are included in backup/restore. Printer credentials (IP, serial, access code) are stored separately in `/bambu.json`.
+An **Idle off** timeout (configurable in minutes from the BAMBU tab, 0 = disabled) turns all LEDs off after the printer has been idle or finished for that duration. The LEDs come back automatically as soon as the printer enters a new state. The mode and timeout are persisted in `/config.json` (together with the other effect settings) and are included in backup/restore. Printer credentials (IP, serial, access code) are stored separately in `/bambu.json`.
+
+### TIMER Tab
+![TIMER](screenshots/timer_v0.9.png)
+
+Add, edit and delete timers with day selection, time (HH:MM:SS), action and duration in seconds (0 = no limit). Persistent save to device.
+
+### SETTINGS Tab
+
+Combines WiFi and MQTT configuration in a single tab, separated by a divider.
+
+**WiFi section** — Configure device name (mDNS hostname), NTP server, timezone, WiFi credentials and static IP. Saving restarts the device.
+
+**MQTT section** — Configure broker address, port, credentials, client ID and topic prefix. Enable/disable toggle with real-time connection status indicator.
 
 ### INFO Tab
 ![INFO](screenshots/info_v0.9.png)
@@ -364,3 +372,11 @@ pio run --target uploadfs
 ├── compress_web.py           # Pre-build script: gzip-compresses src_data/ → data/
 └── partitions.csv            # Custom partition table (1856 KB OTA slots)
 ```
+
+### Architecture notes
+
+- **BambuLab MQTT callback** (`_onMessage`) only copies the raw payload into a buffer; JSON parsing happens in `loop()` on the next tick — no heavy processing in the MQTT callback context.
+- **GeoController** fires `onWeatherUpdate` / `onAirQualityUpdate` callbacks directly after each fetch instead of relying on a polling pattern in `loop()`.
+- **MqttController::loop()** handles RSSI publish internally every 60 s.
+- **BambuLabController::loop()** handles the idle timeout internally via an `onIdleTimeout` callback.
+- **TeeSerial** owns the console message queue and JSON formatting; `drainOne()` is called from `loop()` to keep serial processing off the network stack.

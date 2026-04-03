@@ -1,11 +1,13 @@
 #pragma once
 #include <Arduino.h>
 #include <functional>
+#include <vector>
+#include <ArduinoJson.h>
 
 // ─── TeeSerial ─────────────────────────────────────────────────────────────
 // Intercepts every write to Serial and forwards it to the real hardware serial
-// AND buffers lines for the onLine callback (used to stream output to the web
-// console via WebSocket).
+// AND buffers lines for the web console (WebSocket), draining one per loop tick
+// to avoid flooding the AsyncWebSocket send buffer.
 //
 // IMPORTANT: this header must be included BEFORE all other headers in main.cpp.
 // The class definition appears first, so all Serial.xxx calls inside the class
@@ -14,8 +16,13 @@
 
 class TeeSerial : public Stream {
 public:
-    // Called with each complete output line (trimmed, without newline)
-    std::function<void(const String&)> onLine;
+    // Returns the next queued console JSON message, or an empty String if none.
+    String drainOne() {
+        if (_queue.empty()) return String();
+        String msg = _queue.front();
+        _queue.erase(_queue.begin());
+        return msg;
+    }
 
     // Temporarily disable web broadcast (physical serial is unaffected)
     void setWebOutput(bool enabled) { _webOutput = enabled; }
@@ -51,14 +58,21 @@ public:
 
 private:
     static constexpr size_t MAX_LINE = 512;
-    String _buf;
-    bool   _webOutput = true;
+    String              _buf;
+    bool                _webOutput = true;
+    std::vector<String> _queue;
 
     void _flush() {
         String line = _buf;
         _buf = "";
         line.trim();
-        if (line.length() > 0 && onLine && _webOutput) onLine(line);
+        if (line.length() == 0 || !_webOutput) return;
+        JsonDocument doc;
+        doc["type"] = "console";
+        doc["text"] = line;
+        String msg;
+        serializeJson(doc, msg);
+        _queue.push_back(msg);
     }
 };
 

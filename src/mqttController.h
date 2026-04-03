@@ -24,6 +24,7 @@ private:
     bool   enabled     = false;
 
     unsigned long lastReconnectAttempt = 0;
+    unsigned long _lastRssiPublish     = 0;
     bool          pendingConnected     = false;
 
     static MQTTController *_instance;
@@ -146,6 +147,11 @@ public:
                 pendingConnected = false;
                 if (connectedHandler) connectedHandler();
             }
+            if (millis() - _lastRssiPublish >= 60000)
+            {
+                _lastRssiPublish = millis();
+                publishRssi(WiFi.RSSI());
+            }
         }
     }
 
@@ -166,6 +172,7 @@ public:
 
     bool saveConfig()
     {
+        Serial.println("Saving MQTT config...");
         JsonDocument doc;
         doc["broker"]   = broker;
         doc["port"]     = port;
@@ -431,6 +438,7 @@ public:
                      const String &newPassword, const String &newClientId, const String &newTopic,
                      bool newEnabled)
     {
+        Serial.println("Applying MQTT config...");
         enabled     = newEnabled;
         broker      = newBroker;
         port        = newPort;
@@ -440,14 +448,20 @@ public:
         topicPrefix = newTopic;
         cmdTopic    = topicPrefix + "/cmd";
         statusTopic = topicPrefix + "/status";
-        if (!enabled)
+
+        // Ensure the underlying WiFiClient is always set before any PubSubClient call
+        mqttClient.setClient(wifiClient);
+        mqttClient.setCallback(onMessage);
+        mqttClient.setBufferSize(2048);
+
+        if (!enabled || broker.isEmpty())
         {
-            mqttClient.disconnect();
+            if (mqttClient.connected()) mqttClient.disconnect();
         }
-        else if (!broker.isEmpty())
+        else
         {
             mqttClient.setServer(broker.c_str(), port);
-            mqttClient.disconnect();
+            if (mqttClient.connected()) mqttClient.disconnect();
             lastReconnectAttempt = 0;
         }
     }

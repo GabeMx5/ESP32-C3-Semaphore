@@ -99,17 +99,43 @@
     </div>
     <div class="tabs">
       <div class="tab-indicator"></div>
-      <button class="tab-button active" onclick="openTab(event,'led')">LED</button>
-      <button class="tab-button" onclick="openTab(event,'others')">FX</button>
-      <button class="tab-button" onclick="openTab(event,'timer')">TIMER</button>
-      <button class="tab-button" onclick="openTab(event,'wifi')">WIFI</button>
-      <button class="tab-button" onclick="openTab(event,'mqtt')">MQTT</button>
-      <button class="tab-button" onclick="openTab(event,'info')">INFO</button>
-      <button class="tab-button" onclick="openTab(event,'console')">CON</button>
+      <!-- HOME -->
+      <button class="tab-button active" onclick="openTab(event,'home')" title="Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z"/></svg>
+      </button>
+      <!-- FX -->
+      <button class="tab-button" onclick="openTab(event,'others')" title="FX">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </button>
+      <!-- BAMBULAB -->
+      <button class="tab-button" onclick="openTab(event,'bambu')" title="BambuLab">
+        <svg version="1.1" x="0px" y="0px" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.7,9.7v12.5h7.1v-9.7L12.7,9.7z"/>
+          <path d="M12.7,1.8v6.3l7.1,2.8V1.8H12.7z"/>
+          <path d="M4.1,14.3V1.8h7.1v9.8L4.1,14.3z"/>
+          <path d="M4.1,22.2V16l7.1-2.8v9.1H4.1z"/>
+        </svg>
+      </button>
+      <!-- TIMER -->
+      <button class="tab-button" onclick="openTab(event,'timer')" title="Timer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </button>
+      <!-- SETTINGS -->
+      <button class="tab-button" onclick="openTab(event,'settings')" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      </button>
+      <!-- INFO -->
+      <button class="tab-button" onclick="openTab(event,'info')" title="Info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      </button>
+      <!-- CONSOLE -->
+      <button class="tab-button" onclick="openTab(event,'console')" title="Console">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      </button>
     </div>
 
     <div class="tab-viewport">
-    <div id="led" class="tab-content active">
+    <div id="home" class="tab-content active">
       <div class="led-control">
         <div id="svgContainer"></div>
         <!-- LED 2 -->
@@ -137,8 +163,10 @@
     </div>
 
     <div id="others" class="tab-content">
+
+      <p class="section-heading">Cycle mode</p>
       <div class="option-row">
-        <span>Cycle</span>
+        <span>Active</span>
         <button id="cycleBtn" class="toggle-btn off">OFF</button>
       </div>
       <div class="option-row">
@@ -153,14 +181,31 @@
         <label class="time-label">Bottom Led time (s)</label>
         <input id="bottomLedTime" class="time-input" type="number" min="0" step="1" value="5">
       </div>
+      <hr class="section-divider">
+      <p class="section-heading">Party mode</p>
       <div class="option-row">
-        <span>Party mode</span>
+        <span>Active</span>
         <button id="partyBtn" class="toggle-btn off">OFF</button>
       </div>
       <div class="option-row">
         <label class="time-label madness-label">Party madness</label>
         <input id="partyMadnessVal" class="time-input" type="number" min="1" max="10" value="5">
       </div>
+
+      <hr class="section-divider">
+      <p class="section-heading">Rainbow mode</p>
+      <div class="option-row">
+        <span>Rainbow</span>
+        <button id="rainbowBtn" class="toggle-btn off">OFF</button>
+      </div>
+      <div class="option-row">
+        <label class="time-label">Cycle time (s)</label>
+        <input id="rainbowCycleTime" class="time-input" type="number" min="1" step="1" value="5">
+      </div>
+
+      <hr class="section-divider">
+      <p class="section-heading">Games</p>
+
       <div class="option-row action-row">
         <button id="randomYNBtn" class="action-btn">
           <svg id="diceIcon" class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -174,6 +219,20 @@
           Random Yes/No
         </button>
       </div>
+
+      <div class="option-row action-row">
+        <button id="guessBtn" class="action-btn">
+          <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="none"/>
+          </svg>
+          Guess
+        </button>
+      </div>
+
+      <hr class="section-divider">
+      <p class="section-heading">Utility</p>
       <div class="option-row action-row">
         <button id="morseBtn" class="action-btn">
           <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -193,25 +252,19 @@
           Morse Code
         </button>
       </div>
+      
       <div class="option-row action-row">
-        <button id="guessBtn" class="action-btn">
-          <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <circle cx="12" cy="17" r="0.5" fill="currentColor" stroke="none"/>
-          </svg>
-          Guess
-        </button>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:10px;margin-bottom:9px;">
-        <button id="weatherBtn" class="action-btn" style="flex:1;margin:0;">
+          <button id="weatherBtn" class="action-btn">
           <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
             <circle cx="12" cy="12" r="4"/>
           </svg>
           Weather
         </button>
-        <button id="airQualityBtn" class="action-btn" style="flex:1;margin:0;">
+      </div>
+
+      <div class="option-row action-row">
+        <button id="airQualityBtn" class="action-btn">
           <svg class="dice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2 12a10 10 0 1 0 20 0 10 10 0 0 0-20 0"/>
             <path d="M12 8v4l3 3"/>
@@ -220,24 +273,91 @@
           Air Quality
         </button>
       </div>
+
+    </div>
+
+    <div id="bambu" class="tab-content">
+
+      <p class="section-heading">Bambulab Mode</p>
       <div class="option-row">
-        <span>Rainbow</span>
-        <button id="rainbowBtn" class="toggle-btn off">OFF</button>
-      </div>
-      <div class="option-row">
-        <label class="time-label">Cycle time (s)</label>
-        <input id="rainbowCycleTime" class="time-input" type="number" min="1" step="1" value="5">
-      </div>
-      <hr class="section-divider">
-      <p class="section-heading">BambuLab mode</p>
-      <div class="option-row">
-        <span>Printer mode</span>
+        <span>Active</span>
         <button id="bambuModeBtn" class="toggle-btn off" disabled>OFF</button>
       </div>
       <div class="option-row">
         <label class="time-label">Idle off (min)</label>
         <input id="bambuIdleTimeout" class="time-input" type="number" min="0" step="1" value="5">
       </div>
+
+      <hr class="section-divider">
+      <p class="section-heading">State Colors</p>
+      <select id="bambuStateSelect" onchange="onBambuStateSelect()" style="width:100%;margin-bottom:10px">
+        <option value="unknown">Unknown</option>
+        <option value="idle">Idle</option>
+        <option value="prepare">Preparing</option>
+        <option value="running">Printing</option>
+        <option value="paused">Paused</option>
+        <option value="finished">Finished</option>
+        <option value="failed">Failed</option>
+        <option value="init">Init</option>
+        <option value="slicing">Slicing</option>
+        <option value="offline">Offline</option>
+      </select>
+      <div class="option-row">
+        <span>LED Top</span>
+        <span class="weather-dot" id="bambuStateDot2" style="cursor:pointer;position:relative;overflow:visible" onclick="document.getElementById('bambuStateColor2').click()">
+          <input type="color" id="bambuStateColor2" class="bambuStateColorPicker" oninput="onBambuStateColorChange(2,this.value)">
+        </span>
+      </div>
+      <div class="option-row">
+        <span>LED Middle</span>
+        <span class="weather-dot" id="bambuStateDot1" style="cursor:pointer;position:relative;overflow:visible" onclick="document.getElementById('bambuStateColor1').click()">
+          <input type="color" id="bambuStateColor1" class="bambuStateColorPicker" oninput="onBambuStateColorChange(1,this.value)">
+        </span>
+      </div>
+      <div class="option-row">
+        <span>LED Bottom</span>
+        <span class="weather-dot" id="bambuStateDot0" style="cursor:pointer;position:relative;overflow:visible" onclick="document.getElementById('bambuStateColor0').click()">
+          <input type="color" id="bambuStateColor0" class="bambuStateColorPicker" oninput="onBambuStateColorChange(0,this.value)">
+        </span>
+      </div>
+
+      <div class="mqtt-status">
+        Status: <span id="bambuStatus">—</span>
+      </div>
+
+      <hr class="section-divider">
+      <p class="section-heading">Connection</p>
+
+      <div class="checkbox-group" style="margin-bottom: 16px;">
+        <input type="checkbox" id="bambuEnabled">
+        <label for="bambuEnabled">Enable BambuLab</label>
+      </div>
+
+      <label>Printer IP</label>
+      <input id="bambuIp" type="text" placeholder="192.168.1.x">
+
+      <label>Serial Number</label>
+      <input id="bambuSerial" type="text" placeholder="XXXXXXXXXXXXXXXX">
+
+      <label>Access Code</label>
+      <div class="password-wrapper">
+        <input id="bambuAccessCode" type="password" placeholder="••••••••">
+        <button type="button" class="eye-btn" onclick="togglePassword('bambuAccessCode', this)">
+          <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <button onclick="saveBambu()" class="save-btn">
+        <svg id="saveBambuIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save BambuLab
+      </button>
     </div>
 
     <div id="timer" class="tab-content">
@@ -255,7 +375,10 @@
       </button>
     </div>
 
-    <div id="wifi" class="tab-content">
+    <div id="settings" class="tab-content">
+
+      <p class="section-heading">WiFi</p>
+
       <label>Device name</label>
       <input id="deviceName" type="text" placeholder="semaphore">
 
@@ -344,9 +467,11 @@
         </svg>
         Save WiFi
       </button>
-    </div>
 
-    <div id="mqtt" class="tab-content">
+
+      <hr class="section-divider">
+      <p class="section-heading">MQTT</p>
+
       <div class="checkbox-group" style="margin-bottom: 16px;">
         <input type="checkbox" id="mqttEnabled">
         <label for="mqttEnabled">Enable MQTT</label>
@@ -391,43 +516,6 @@
         Save MQTT
       </button>
 
-      <hr class="section-divider">
-      <p class="section-heading">BambuLab</p>
-
-      <div class="checkbox-group" style="margin-bottom: 16px;">
-        <input type="checkbox" id="bambuEnabled">
-        <label for="bambuEnabled">Enable BambuLab</label>
-      </div>
-
-      <label>Printer IP</label>
-      <input id="bambuIp" type="text" placeholder="192.168.1.x">
-
-      <label>Serial Number</label>
-      <input id="bambuSerial" type="text" placeholder="XXXXXXXXXXXXXXXX">
-
-      <label>Access Code</label>
-      <div class="password-wrapper">
-        <input id="bambuAccessCode" type="password" placeholder="••••••••">
-        <button type="button" class="eye-btn" onclick="togglePassword('bambuAccessCode', this)">
-          <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-        </button>
-      </div>
-
-      <div class="mqtt-status">
-        Status: <span id="bambuStatus">—</span>
-      </div>
-
-      <button onclick="saveBambu()" class="save-btn">
-        <svg id="saveBambuIcon" class="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/>
-          <polyline points="7 3 7 8 15 8"/>
-        </svg>
-        Save BambuLab
-      </button>
     </div>
 
     <div id="info" class="tab-content">
