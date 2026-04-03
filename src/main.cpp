@@ -1,9 +1,10 @@
-#define FIRMWARE_VERSION "0.9.8"
+#define FIRMWARE_VERSION "0.9.9"
 
 // Must be included first: intercepts all Serial output for the web console
 #include "teeSerial.h"
 TeeSerial teeSerial;
 
+#include <vector>
 #include <WiFi.h>
 // forward declaration
 static void aqValueToRgb(float v, float tGood, float tModerate, float tPoor,
@@ -137,6 +138,10 @@ void broadcastRainbowStatus()
     mqttController.publishSwitchState("rainbow", ledController.getRainbowEnabled());
 }
 
+// Console messages are queued and drained one per loop() tick to avoid
+// flooding the AsyncWebSocket send buffer when many lines arrive at once.
+static std::vector<String> _consoleQueue;
+
 void broadcastConsole(const String& text)
 {
     JsonDocument doc;
@@ -144,7 +149,7 @@ void broadcastConsole(const String& text)
     doc["text"] = text;
     String msg;
     serializeJson(doc, msg);
-    ws.textAll(msg);
+    _consoleQueue.push_back(msg);
 }
 
 void broadcastConfigStatus()
@@ -727,14 +732,22 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         configController.setIdleTimeoutMin(timeout);
         bambuIdleSince  = 0;
         bambuIdleLedOff = false;
-        if (mode && bambuController.isConnected()) {
-            BambuState cur = bambuController.getState();
-            applyBambuLedState(cur);
-            if (cur == BambuState::IDLE || cur == BambuState::FINISH)
-                bambuIdleSince = millis();
-        }
-        else if (!mode)
+        if (mode) {
+            ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
+            ledController.setParty(false, ledController.getPartyMadness());
+            ledController.setRainbow(false, ledController.getRainbowCycleTime());
+            broadcastCycleStatus();
+            broadcastPartyStatus();
+            broadcastRainbowStatus();
+            if (bambuController.isConnected()) {
+                BambuState cur = bambuController.getState();
+                applyBambuLedState(cur);
+                if (cur == BambuState::IDLE || cur == BambuState::FINISH)
+                    bambuIdleSince = millis();
+            }
+        } else {
             ledController.cancelOverlay();
+        }
         sendBambuConfig(client);
         return;
     }
@@ -992,12 +1005,20 @@ void setup()
         configController.setBambuMode(on);
         bambuIdleSince  = 0;
         bambuIdleLedOff = false;
-        if (on && bambuController.isConnected()) {
-            BambuState cur = bambuController.getState();
-            applyBambuLedState(cur);
-            if (cur == BambuState::IDLE || cur == BambuState::FINISH)
-                bambuIdleSince = millis();
-        } else if (!on) {
+        if (on) {
+            ledController.setCycle(false, ledController.getTopLedTime(), ledController.getMiddleLedTime(), ledController.getBottomLedTime());
+            ledController.setParty(false, ledController.getPartyMadness());
+            ledController.setRainbow(false, ledController.getRainbowCycleTime());
+            broadcastCycleStatus();
+            broadcastPartyStatus();
+            broadcastRainbowStatus();
+            if (bambuController.isConnected()) {
+                BambuState cur = bambuController.getState();
+                applyBambuLedState(cur);
+                if (cur == BambuState::IDLE || cur == BambuState::FINISH)
+                    bambuIdleSince = millis();
+            }
+        } else {
             ledController.cancelOverlay();
         }
         JsonDocument doc;
@@ -1122,6 +1143,10 @@ void loop()
     ledController.update();
     timerController.loop();
     ws.cleanupClients();
+    if (!_consoleQueue.empty()) {
+        ws.textAll(_consoleQueue.front());
+        _consoleQueue.erase(_consoleQueue.begin());
+    }
     mqttController.loop();
     configController.loop();
     static unsigned long lastWeatherPublish  = 0;

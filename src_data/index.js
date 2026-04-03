@@ -1049,7 +1049,6 @@ const TIMER_ACTIONS = [
   { value: "guess",         label: "Guess"          },
   { value: "weather_color",  label: "Weather Color"   },
   { value: "bambu_mode_on",  label: "Printer Mode ON"  },
-  { value: "bambu_mode_off", label: "Printer Mode OFF" },
 ];
 
 function daysSummary(days) {
@@ -1198,7 +1197,7 @@ function renderTimerCard(t) {
         ${colorRow}
         ${morseRow}
         ${guessLedRow}
-        ${!["morse","random_yes_no","guess","weather_color","bambu_mode_on","bambu_mode_off"].includes(t.action) ? `<div class="timer-row">
+        ${!["morse","random_yes_no","guess","weather_color","bambu_mode_on"].includes(t.action) ? `<div class="timer-row">
           <label>Duration (s)</label>
           <input type="number" class="time-input" min="0" step="1" value="${durVal}" placeholder="0 = no limit" onchange="setTimerField(${t.id},'duration',parseInt(this.value)||0)">
         </div>` : ""}

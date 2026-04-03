@@ -123,7 +123,6 @@ private:
         else if (t.action == "guess"          && onGuess)         onGuess(t.guessLed);
         else if (t.action == "weather_color"  && onWeatherColor)  onWeatherColor();
         else if (t.action == "bambu_mode_on"  && onBambuMode)     onBambuMode(true);
-        else if (t.action == "bambu_mode_off" && onBambuMode)     onBambuMode(false);
         if (t.duration > 0) {
             t._active  = true;
             t._firedAt = millis();
