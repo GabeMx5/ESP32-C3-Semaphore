@@ -1,8 +1,9 @@
-#define FIRMWARE_VERSION "1.0.1"
+#define FIRMWARE_VERSION "1.0.2"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
 #include <vector>
+#include <set>
 #include <esp_log.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -30,6 +31,9 @@ TeeSerial teeSerial;
 
 AsyncWebServer webServer(80);
 AsyncWebSocket ws("/ws");
+static std::set<uint32_t> _consoleViewerIds;  // client IDs currently on the console tab
+static std::set<uint32_t> _infoViewerIds;     // client IDs currently on the info or settings tab
+static std::set<uint32_t> _bambuViewerIds;    // client IDs currently on the bambu tab
 WiFiConfigManager wifiManager;
 LEDController ledController;
 NetworkManager networkManager;
@@ -64,7 +68,7 @@ static const char* conditionToString(WeatherCondition c)
 
 // ─── Broadcast ────────────────────────────────────────────────────────────────
 
-void broadcastLedStatus()
+static String _buildLedStatus()
 {
     JsonDocument doc;
     doc["type"] = "ledStatus";
@@ -79,8 +83,14 @@ void broadcastLedStatus()
         led["on"]      = ledController.getLEDOn(i);
         led["blink"]   = ledController.getLEDBlink(i);
     }
-    String msg;
-    serializeJson(doc, msg);
+    String msg; serializeJson(doc, msg); return msg;
+}
+
+void sendLedStatus(AsyncWebSocketClient *client) { client->text(_buildLedStatus()); }
+
+void broadcastLedStatus()
+{
+    String msg = _buildLedStatus();
     ws.textAll(msg);
     mqttController.publish(msg);
     for (int i = 0; i < LED_COUNT; i++)
@@ -94,7 +104,7 @@ void broadcastLedStatus()
     }
 }
 
-void broadcastCycleStatus()
+static String _buildCycleStatus()
 {
     JsonDocument doc;
     doc["type"]          = "cycleStatus";
@@ -102,49 +112,72 @@ void broadcastCycleStatus()
     doc["topLedTime"]    = ledController.getTopLedTime();
     doc["middleLedTime"] = ledController.getMiddleLedTime();
     doc["bottomLedTime"] = ledController.getBottomLedTime();
-    String msg;
-    serializeJson(doc, msg);
+    String msg; serializeJson(doc, msg); return msg;
+}
+
+void sendCycleStatus(AsyncWebSocketClient *client) { client->text(_buildCycleStatus()); }
+
+void broadcastCycleStatus()
+{
+    String msg = _buildCycleStatus();
     ws.textAll(msg);
     mqttController.publish(msg);
     mqttController.publishSwitchState("cycle", ledController.getCycleEnabled());
 }
 
-void broadcastPartyStatus()
+static String _buildPartyStatus()
 {
     JsonDocument doc;
     doc["type"]         = "partyStatus";
     doc["party"]        = ledController.getPartyEnabled();
     doc["partyMadness"] = ledController.getPartyMadness();
-    String msg;
-    serializeJson(doc, msg);
+    String msg; serializeJson(doc, msg); return msg;
+}
+
+void sendPartyStatus(AsyncWebSocketClient *client) { client->text(_buildPartyStatus()); }
+
+void broadcastPartyStatus()
+{
+    String msg = _buildPartyStatus();
     ws.textAll(msg);
     mqttController.publish(msg);
     mqttController.publishSwitchState("party", ledController.getPartyEnabled());
 }
 
-void broadcastRainbowStatus()
+static String _buildRainbowStatus()
 {
     JsonDocument doc;
     doc["type"]             = "rainbowStatus";
     doc["rainbow"]          = ledController.getRainbowEnabled();
     doc["rainbowCycleTime"] = ledController.getRainbowCycleTime();
-    String msg;
-    serializeJson(doc, msg);
+    String msg; serializeJson(doc, msg); return msg;
+}
+
+void sendRainbowStatus(AsyncWebSocketClient *client) { client->text(_buildRainbowStatus()); }
+
+void broadcastRainbowStatus()
+{
+    String msg = _buildRainbowStatus();
     ws.textAll(msg);
     mqttController.publish(msg);
     mqttController.publishSwitchState("rainbow", ledController.getRainbowEnabled());
 }
 
-void broadcastConfigStatus()
+static String _buildConfigStatus()
 {
     JsonDocument doc;
     doc["type"]                  = "configStatus";
     doc["makeChangesPersistent"] = configController.getMakeChangesPersistent();
     doc["latitude"]              = configController.getLatitude();
     doc["longitude"]             = configController.getLongitude();
-    String msg;
-    serializeJson(doc, msg);
-    ws.textAll(msg);
+    String msg; serializeJson(doc, msg); return msg;
+}
+
+void sendConfigStatus(AsyncWebSocketClient *client) { client->text(_buildConfigStatus()); }
+
+void broadcastConfigStatus()
+{
+    ws.textAll(_buildConfigStatus());
 }
 
 void sendMqttConfig(AsyncWebSocketClient *client)
@@ -233,13 +266,11 @@ void sendWifiConfig(AsyncWebSocketClient *client)
     client->text(response);
 }
 
+// Dynamic fields — sent every second when client is on the info tab
 void sendSysInfo(AsyncWebSocketClient *client)
 {
     JsonDocument doc;
     doc["type"]          = "sysInfo";
-    doc["version"]       = FIRMWARE_VERSION;
-    doc["ip"]            = WiFi.localIP().toString();
-    doc["ssid"]          = WiFi.SSID();
     doc["rssi"]          = WiFi.RSSI();
     doc["freeHeap"]      = ESP.getFreeHeap();
     struct tm timeinfo;
@@ -248,18 +279,30 @@ void sendSysInfo(AsyncWebSocketClient *client)
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
         doc["datetime"] = buf;
     }
-    doc["uptime"]        = millis() / 1000;
+    doc["uptime"]         = millis() / 1000;
     doc["bambuConnected"] = bambuController.isConnected();
-    doc["bambuIdleSec"]   = bambuController.getIdleSec();
-    doc["mqttConnected"] = mqttController.isConnected();
-    doc["mqttBroker"]    = mqttController.getBroker();
-    doc["mac"]           = WiFi.macAddress();
-    doc["cpuFreq"]       = ESP.getCpuFreqMHz();
-    doc["chipModel"]     = ESP.getChipModel();
-    doc["chipRevision"]  = ESP.getChipRevision();
-    doc["wifiChannel"]   = WiFi.channel();
-    doc["latitude"]  = configController.getLatitude();
-    doc["longitude"] = configController.getLongitude();
+    doc["mqttConnected"]  = mqttController.isConnected();
+    String response;
+    serializeJson(doc, response);
+    client->text(response);
+}
+
+// Static fields — sent once at connect and when weather/AQ data updates
+static String _buildSysInfoStatic()
+{
+    JsonDocument doc;
+    doc["type"]         = "sysInfoStatic";
+    doc["version"]      = FIRMWARE_VERSION;
+    doc["ip"]           = WiFi.localIP().toString();
+    doc["ssid"]         = WiFi.SSID();
+    doc["mac"]          = WiFi.macAddress();
+    doc["cpuFreq"]      = ESP.getCpuFreqMHz();
+    doc["chipModel"]    = ESP.getChipModel();
+    doc["chipRevision"] = ESP.getChipRevision();
+    doc["wifiChannel"]  = WiFi.channel();
+    doc["mqttBroker"]   = mqttController.getBroker();
+    doc["latitude"]     = configController.getLatitude();
+    doc["longitude"]    = configController.getLongitude();
     if (geoController.weather.valid) {
         doc["weatherCode"]      = geoController.weather.weatherCode;
         doc["weatherTemp"]      = geoController.weather.temperature;
@@ -267,24 +310,18 @@ void sendSysInfo(AsyncWebSocketClient *client)
         doc["weatherCondition"] = (int)geoController.weather.condition;
         uint8_t wr, wg, wb;
         weatherTempToRgb(geoController.weather.temperature, wr, wg, wb);
-        doc["temperatureR"] = wr;
-        doc["temperatureG"] = wg;
-        doc["temperatureB"] = wb;
+        doc["temperatureR"] = wr; doc["temperatureG"] = wg; doc["temperatureB"] = wb;
         uint8_t cr, cg, cb;
         conditionToRgb(geoController.weather.condition, geoController.weather.isDay, cr, cg, cb);
-        doc["conditionR"] = cr;
-        doc["conditionG"] = cg;
-        doc["conditionB"] = cb;
+        doc["conditionR"] = cr; doc["conditionG"] = cg; doc["conditionB"] = cb;
         uint8_t hr, hg, hb;
         humidityToRgb(geoController.weather.humidity, hr, hg, hb);
-        doc["humidityR"] = hr;
-        doc["humidityG"] = hg;
-        doc["humidityB"] = hb;
+        doc["humidityR"] = hr; doc["humidityG"] = hg; doc["humidityB"] = hb;
     }
     if (geoController.airQuality.valid) {
-        doc["aqPm25"]  = geoController.airQuality.pm2_5;
-        doc["aqPm10"]  = geoController.airQuality.pm10;
-        doc["aqNo2"]   = geoController.airQuality.no2;
+        doc["aqPm25"] = geoController.airQuality.pm2_5;
+        doc["aqPm10"] = geoController.airQuality.pm10;
+        doc["aqNo2"]  = geoController.airQuality.no2;
         uint8_t aqr, aqg, aqb;
         aqValueToRgb(geoController.airQuality.pm2_5, 12,  35,  55,  aqr, aqg, aqb);
         doc["aqPm25R"] = aqr; doc["aqPm25G"] = aqg; doc["aqPm25B"] = aqb;
@@ -293,9 +330,24 @@ void sendSysInfo(AsyncWebSocketClient *client)
         aqValueToRgb(geoController.airQuality.no2,   40,  100, 200, aqr, aqg, aqb);
         doc["aqNo2R"]  = aqr; doc["aqNo2G"]  = aqg; doc["aqNo2B"]  = aqb;
     }
-    String response;
-    serializeJson(doc, response);
-    client->text(response);
+    String msg; serializeJson(doc, msg); return msg;
+}
+
+void sendSysInfoStatic(AsyncWebSocketClient *client) { client->text(_buildSysInfoStatic()); }
+
+void broadcastSysInfoStatic() { ws.textAll(_buildSysInfoStatic()); }
+
+// Send a message to clients on the bambu or info tab only
+static void _sendToBambuAndInfoViewers(const String& msg)
+{
+    for (uint32_t id : _bambuViewerIds) {
+        AsyncWebSocketClient* c = ws.client(id);
+        if (c) c->text(msg);
+    }
+    for (uint32_t id : _infoViewerIds) {
+        AsyncWebSocketClient* c = ws.client(id);
+        if (c) c->text(msg);
+    }
 }
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB)
@@ -566,21 +618,6 @@ void processCommand(JsonDocument &doc)
         geoController.setLocation(lat, lon);
         Serial.printf("[Geo] Location updated: %.6f, %.6f\n", lat, lon);
     }
-    else if (strcmp(type, "getInfo") == 0)
-    {
-        JsonDocument resp;
-        resp["type"]          = "sysInfo";
-        resp["ip"]            = WiFi.localIP().toString();
-        resp["ssid"]          = WiFi.SSID();
-        resp["rssi"]          = WiFi.RSSI();
-        resp["freeHeap"]      = ESP.getFreeHeap();
-        resp["uptime"]        = millis() / 1000;
-        resp["mqttConnected"] = mqttController.isConnected();
-        resp["mqttBroker"]    = mqttController.getBroker();
-        String msg;
-        serializeJson(resp, msg);
-        mqttController.publish(msg);
-    }
     else if (strcmp(type, "getMqtt") == 0)
     {
         JsonDocument resp;
@@ -626,11 +663,6 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
 
     const char *type = doc["type"];
 
-    if (strcmp(type, "ping") == 0)
-    {
-        client->text("{\"type\":\"pong\"}");
-        return;
-    }
 
     if (strcmp(type, "startGuess") == 0)
     {
@@ -679,10 +711,40 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
         return;
     }
 
-    // getInfo needs client-specific response
-    if (strcmp(type, "getInfo") == 0)
+    if (strcmp(type, "consoleOpen") == 0)
     {
-        sendSysInfo(client);
+        _consoleViewerIds.insert(client->id());
+        return;
+    }
+
+    if (strcmp(type, "consoleClose") == 0)
+    {
+        _consoleViewerIds.erase(client->id());
+        return;
+    }
+
+    if (strcmp(type, "infoOpen") == 0)
+    {
+        _infoViewerIds.insert(client->id());
+        sendSysInfo(client);  // immediate push, don't wait for the 1 s tick
+        return;
+    }
+
+    if (strcmp(type, "infoClose") == 0)
+    {
+        _infoViewerIds.erase(client->id());
+        return;
+    }
+
+    if (strcmp(type, "bambuOpen") == 0)
+    {
+        _bambuViewerIds.insert(client->id());
+        return;
+    }
+
+    if (strcmp(type, "bambuClose") == 0)
+    {
+        _bambuViewerIds.erase(client->id());
         return;
     }
 
@@ -708,7 +770,7 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, uint8_t *data, size_t 
             doc["enabled"]    | false
         );
         bambuController.saveConfig();
-        client->text("{\"type\":\"status\",\"status\":\"saved\",\"message\":\"BambuLab config saved\"}");
+        sendBambuConfig(client);
         return;
     }
 
@@ -814,18 +876,23 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     {
         case WS_EVT_CONNECT:
             Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-            broadcastLedStatus();
-            broadcastCycleStatus();
-            broadcastPartyStatus();
-            broadcastRainbowStatus();
+            client->keepAlivePeriod(10);  // native WS ping frame every 10 s
+            sendLedStatus(client);
+            sendCycleStatus(client);
+            sendPartyStatus(client);
+            sendRainbowStatus(client);
             sendWifiConfig(client);
             sendMqttConfig(client);
             sendBambuConfig(client);
             timerController.sendTimers(client);
-            broadcastConfigStatus();
+            sendConfigStatus(client);
+            sendSysInfoStatic(client);
             break;
         case WS_EVT_DISCONNECT:
             Serial.printf("WebSocket client #%u disconnected from %s\n", client->id(), client->remoteIP().toString().c_str());
+            _consoleViewerIds.erase(client->id());
+            _infoViewerIds.erase(client->id());
+            _bambuViewerIds.erase(client->id());
             break;
         case WS_EVT_DATA:
             handleWebSocketMessage(client, data, len);
@@ -1093,6 +1160,7 @@ void setup()
             geoController.weather.humidity,
             conditionToString(geoController.weather.condition)
         );
+        broadcastSysInfoStatic();
     };
     geoController.onAirQualityUpdate = []() {
         mqttController.publishAirQuality(
@@ -1100,6 +1168,7 @@ void setup()
             geoController.airQuality.pm10,
             geoController.airQuality.no2
         );
+        broadcastSysInfoStatic();
     };
     configTzTime(wifiManager.timezone.c_str(), wifiManager.ntpServer.c_str());
     MDNS.begin(wifiManager.deviceName.c_str());
@@ -1198,9 +1267,51 @@ void loop()
     ledController.update();
     timerController.loop();
     ws.cleanupClients();
-    {
+    if (!_consoleViewerIds.empty()) {
         String msg = teeSerial.drainOne();
-        if (msg.length()) ws.textAll(msg);
+        if (msg.length()) {
+            for (uint32_t id : _consoleViewerIds) {
+                AsyncWebSocketClient* c = ws.client(id);
+                if (c) c->text(msg);
+            }
+        }
+    }
+    {
+        static unsigned long _lastInfoPush = 0;
+        if (!_infoViewerIds.empty() && millis() - _lastInfoPush >= 1000) {
+            _lastInfoPush = millis();
+            for (uint32_t id : _infoViewerIds) {
+                AsyncWebSocketClient* c = ws.client(id);
+                if (c) sendSysInfo(c);
+            }
+        }
+    }
+    {
+        static bool _lastBambuConnected = false;
+        bool nowConnected = bambuController.isConnected();
+        if (nowConnected != _lastBambuConnected) {
+            _lastBambuConnected = nowConnected;
+            JsonDocument doc;
+            doc["type"]      = "bambuConfig";
+            doc["connected"] = nowConnected;
+            if (!nowConnected) doc["state"] = "offline";
+            String msg; serializeJson(doc, msg);
+            _sendToBambuAndInfoViewers(msg);
+        }
+    }
+    {
+        static unsigned long _lastIdlePush = 0;
+        if (millis() - _lastIdlePush >= 1000) {
+            _lastIdlePush = millis();
+            int32_t idleSec = bambuController.getIdleSec();
+            if (idleSec >= 0) {
+                JsonDocument doc;
+                doc["type"]    = "bambuConfig";
+                doc["idleSec"] = idleSec;
+                String msg; serializeJson(doc, msg);
+                _sendToBambuAndInfoViewers(msg);
+            }
+        }
     }
     mqttController.loop();
     configController.loop();

@@ -83,7 +83,7 @@ Location is configurable from the Info tab via an interactive map overlay: tap a
 - **WiFi** STA with DHCP or static IP; fallback to AP mode (`192.168.4.1`) after 3 failed attempts (3-minute timeout, then auto-restart)
 - **Improv Wi-Fi Serial** first-boot wizard: after flashing, configure WiFi credentials from the browser within 1 minute; after the timeout the device switches to AP mode (`192.168.4.1`) automatically
 - **mDNS** with configurable hostname (default `semaphore.local`)
-- **WebSocket** real-time with application-level ping/pong (8 s interval, 5 s timeout)
+- **WebSocket** real-time with native ping frames every 10 s per client
 - **OTA** (ArduinoOTA) for wireless firmware updates from PlatformIO
 - **Firmware update from web UI**: the INFO tab allows updating firmware and filesystem directly from the latest GitHub release, with automatic config backup/restore. On every new connection the device automatically checks for available updates and shows the update prompt if a newer version is found
 - **Automatic OTA rollback**: if the new firmware crashes before completing setup, the bootloader automatically reverts to the previous firmware on next boot
@@ -376,7 +376,9 @@ pio run --target uploadfs
 ### Architecture notes
 
 - **BambuLab MQTT callback** (`_onMessage`) only copies the raw payload into a buffer; JSON parsing happens in `loop()` on the next tick — no heavy processing in the MQTT callback context.
-- **GeoController** fires `onWeatherUpdate` / `onAirQualityUpdate` callbacks directly after each fetch instead of relying on a polling pattern in `loop()`.
+- **GeoController** fires `onWeatherUpdate` / `onAirQualityUpdate` callbacks directly after each fetch instead of relying on a polling pattern in `loop()`. Both callbacks also broadcast updated static system info to all connected clients.
 - **MqttController::loop()** handles RSSI publish internally every 60 s.
 - **BambuLabController::loop()** handles the idle timeout internally via an `onIdleTimeout` callback.
-- **TeeSerial** owns the console message queue and JSON formatting; `drainOne()` is called from `loop()` to keep serial processing off the network stack.
+- **TeeSerial** owns the console message queue and JSON formatting; `drainOne()` is called from `loop()` only when at least one client is viewing the CON tab (`_consoleViewerIds` set).
+- **Server-push sysInfo**: the system info message is split into _static_ (version, IP, MAC, weather/AQ — sent once at connect and whenever weather data refreshes) and _dynamic_ (RSSI, heap, uptime, connection states — pushed every second only to clients that declared themselves on the INFO or SETTINGS tab via `infoOpen`/`infoClose` messages). No client-side polling.
+- **Tab-targeted BambuLab updates**: periodic `bambuConfig` messages (connection state changes, idle time counter) are sent only to clients viewing the BAMBU or INFO tab, tracked via `bambuOpen`/`bambuClose` messages. The idle time counter is computed entirely on the firmware and pushed every second when the printer is in an idle/finished state. Infrequent event-driven messages (`bambuStatus` on state change, `bambuMode` toggle) are still broadcast to all clients.

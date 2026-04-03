@@ -3,7 +3,6 @@ let ws;
 let reconnectDelay = 1000;
 let timers        = [];
 let timerNextId   = 0;
-let infoRefreshTimer = null;
 const MAX_RECONNECT_DELAY = 30000;
 
 const WS_MAX_CALLS_PER_SEC = 10;
@@ -37,24 +36,6 @@ function wsSend(payload) {
   }
 }
 
-let pingInterval = null;
-let pongTimeout  = null;
-
-function startPing() {
-  clearInterval(pingInterval);
-  pingInterval = setInterval(() => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: "ping" }));
-    pongTimeout = setTimeout(() => { showOverlay(); ws.close(); }, 5000);
-  }, 8000);
-}
-
-function stopPing() {
-  clearInterval(pingInterval);
-  clearTimeout(pongTimeout);
-  pingInterval = null;
-  pongTimeout  = null;
-}
 
 let reloadPoller = null;
 let otaFirmwareFlashing = false;
@@ -95,16 +76,15 @@ function connect() {
     console.log("WebSocket connected");
     reconnectDelay = 1000;
     hideOverlay();
-    startPing();
-    requestInfo();
+    const activeTab = localStorage.getItem("activeTab");
+    if (activeTab === "console") wsSend({ type: "consoleOpen" });
+    if (activeTab === "info" || activeTab === "settings") wsSend({ type: "infoOpen" });
+    if (activeTab === "bambu") wsSend({ type: "bambuOpen" });
   });
 
   ws.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
-    if (data.type === "pong") {
-      clearTimeout(pongTimeout);
-      pongTimeout = null;
-    } else if (data.type === "ledStatus") {
+    if (data.type === "ledStatus") {
       onLedStatus(data.leds);
     } else if (data.type === "cycleStatus") {
       onCycleStatus(data);
@@ -112,7 +92,7 @@ function connect() {
       onPartyStatus(data);
     } else if (data.type === "rainbowStatus") {
       onRainbowStatus(data);
-    } else if (data.type === "sysInfo") {
+    } else if (data.type === "sysInfo" || data.type === "sysInfoStatic") {
       onSysInfo(data);
     } else if (data.type === "mqttConfig") {
       onMqttConfig(data);
@@ -146,7 +126,6 @@ function connect() {
   });
 
   ws.addEventListener("close", () => {
-    stopPing();
     if (otaFirmwareFlashing) {
       document.getElementById("ota-reconnect-msg").style.display = "block";
       startReloadPoller();
@@ -528,7 +507,8 @@ function updateMqttStatusLabel(mqttBroker, mqttConnected) {
 let lastSysInfo = null;
 
 function onSysInfo(data) {
-  lastSysInfo = data;
+  lastSysInfo = Object.assign({}, lastSysInfo || {}, data);
+  data = lastSysInfo;
   document.getElementById("infoVersion").textContent = data.version  ? `v${data.version}` : "—";
   if (data.version && data.version !== _deviceVersion) {
     _deviceVersion = data.version;
@@ -545,15 +525,7 @@ function onSysInfo(data) {
     bambuConnectedEl.style.color = data.bambuConnected ? "var(--primary)" : "#f44336";
   }
   const bambuIdleRow = document.getElementById("bambuIdleRow");
-  if (bambuIdleRow) {
-    if (data.bambuConnected) {
-      bambuIdleRow.style.display = "";
-      document.getElementById("infoBambuIdle").textContent =
-        (data.bambuIdleSec != null && data.bambuIdleSec >= 0) ? formatUptime(data.bambuIdleSec) : "—";
-    } else {
-      bambuIdleRow.style.display = "none";
-    }
-  }
+  if (bambuIdleRow && data.bambuConnected === false) bambuIdleRow.style.display = "none";
   document.getElementById("infoHeap").textContent   = data.freeHeap != null ? `${(data.freeHeap / 1024).toFixed(1)} KB` : "—";
   const mqttEl = document.getElementById("infoMqtt");
   if (data.mqttBroker) {
@@ -605,9 +577,6 @@ function onSysInfo(data) {
   }
 }
 
-function requestInfo() {
-  wsSend({ type: "getInfo" });
-}
 
 function backupConfig() {
   const a = document.createElement("a");
@@ -739,12 +708,22 @@ function onBambuConfig(data) {
     _updateBambuStateDots();
   }
   if (data.connected != null) updateBambuStatus(data.state, data.connected);
+  if (data.idleSec != null) {
+    const row = document.getElementById("bambuIdleRow");
+    if (row) {
+      row.style.display = "";
+      document.getElementById("infoBambuIdle").textContent = formatUptime(data.idleSec);
+    }
+  }
 }
 
 function updateBambuStatus(state, connected) {
   const el = document.getElementById("bambuStatus");
   if (!el) return;
   bambuModeBtn.disabled = !connected;
+  const isIdleState = state === "idle" || state === "finished";
+  const row = document.getElementById("bambuIdleRow");
+  if (row && (!connected || !isIdleState)) row.style.display = "none";
   if (!document.getElementById("bambuEnabled").checked) {
     el.textContent = "Disabled";
     el.style.color = "";
@@ -948,10 +927,7 @@ wrapNumberInputs();
       document.getElementById(savedTab)?.classList.add("active");
       btn.classList.add("active");
       currentTabIndex = TAB_ORDER.indexOf(savedTab);
-      if (savedTab === "info" || savedTab === "settings") {
-        requestInfo();
-        infoRefreshTimer = setInterval(requestInfo, 1000);
-      }
+      // infoOpen will be sent once WS connects
     }
   }
   const indicator = document.querySelector(".tab-indicator");
@@ -1066,19 +1042,25 @@ function openTab(evt, tabName) {
     newTab.classList.add("active");
   }
 
+  const prevTabName = localStorage.getItem("activeTab");
   currentTabIndex = newIndex;
   localStorage.setItem("activeTab", tabName);
 
+  if (prevTabName === "console" && tabName !== "console") wsSend({ type: "consoleClose" });
+  if (tabName === "console") wsSend({ type: "consoleOpen" });
+
+  const wasInfoTab = prevTabName === "info" || prevTabName === "settings";
+  const isInfoTab  = tabName === "info" || tabName === "settings";
+  if (wasInfoTab && !isInfoTab) wsSend({ type: "infoClose" });
+  if (!wasInfoTab && isInfoTab) wsSend({ type: "infoOpen" });
+
+  if (prevTabName === "bambu" && tabName !== "bambu") wsSend({ type: "bambuClose" });
+  if (tabName === "bambu" && prevTabName !== "bambu") wsSend({ type: "bambuOpen" });
+
   if (tabName === "timer") renderTimers();
-  clearInterval(infoRefreshTimer);
-  infoRefreshTimer = null;
-  if (tabName === "info") {
-    requestInfo();
-    infoRefreshTimer = setInterval(requestInfo, 1000);
-  } else if (tabName === "settings") {
+  if (tabName === "settings") {
     wsSend({ type: "getMqtt" });
     wsSend({ type: "getBambu" });
-    infoRefreshTimer = setInterval(requestInfo, 1000);
   }
 }
 
