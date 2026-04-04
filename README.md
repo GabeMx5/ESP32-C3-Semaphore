@@ -153,12 +153,15 @@ Accessible from a browser at `http://<ip>` or `http://semaphore.local`. Works as
 Tab buttons are icon-only (no text labels); each button has a tooltip accessible via hover.
 
 ### HOME Tab
-![LED](screenshots/led_v0.9.png)
+![LED](screenshots/home_v1.0.png)
 
 Direct control of the three LEDs with color picker, ON/OFF and BLINK toggles. Real-time SVG representation of the traffic light.
 
 ### FX Tab
-![FX](screenshots/fx_v0.9.png)
+<p>
+  <img src="screenshots/fx_1_v1.0.png" width="49%">
+  <img src="screenshots/fx_2_v1.0.png" width="49%">
+</p>
 
 Enable effects with configurable parameters:
 - Cycle phase durations
@@ -169,7 +172,8 @@ Enable effects with configurable parameters:
 - **Morse Code** button: enter any text and all LEDs flash the message in Morse code
 - **Weather Color** button (enabled only when weather data is available): triggers the weather effect instantly
 
-### BAMBU Tab
+### BAMBULAB Tab
+![FX](screenshots/bambulab_1_v1.0.png)
 
 Dedicated tab for BambuLab printer integration, split into three sections:
 
@@ -192,12 +196,16 @@ When a BambuLab printer is configured and connected, the device connects to the 
 
 An **Idle off** timeout (configurable in minutes from the BAMBU tab, 0 = disabled) turns all LEDs off after the printer has been idle or finished for that duration. The LEDs come back automatically as soon as the printer enters a new state. The mode and timeout are persisted in `/config.json` (together with the other effect settings) and are included in backup/restore. Printer credentials (IP, serial, access code) are stored separately in `/bambu.json`.
 
-### TIMER Tab
-![TIMER](screenshots/timer_v0.9.png)
+### TIMERS Tab
+![TIMERS](screenshots/timers_v1.0.png)
 
 Add, edit and delete timers with day selection, time (HH:MM:SS), action and duration in seconds (0 = no limit). Persistent save to device.
 
 ### SETTINGS Tab
+<p>
+  <img src="screenshots/settings_1_v1.0.png" width="49%">
+  <img src="screenshots/settings_2_v1.0.png" width="49%">
+</p>
 
 Combines WiFi and MQTT configuration in a single tab, separated by a divider.
 
@@ -206,12 +214,15 @@ Combines WiFi and MQTT configuration in a single tab, separated by a divider.
 **MQTT section** — Configure broker address, port, credentials, client ID and topic prefix. Enable/disable toggle with real-time connection status indicator.
 
 ### INFO Tab
-![INFO](screenshots/info_v0.9.png)
+<p>
+  <img src="screenshots/info_1_v1.0.png" width="49%">
+  <img src="screenshots/info_2_v1.0.png" width="49%">
+</p>
 
 System diagnostics: IP, SSID, RSSI, free heap, uptime, MQTT status, MAC address, CPU frequency, chip model, WiFi channel. When BambuLab is configured, two additional rows appear: **BambuLab** (Connected / Disconnected) and **Bambu idle** (time spent in Idle or Finished state, visible whenever the printer is connected).
 
-### CON Tab
-![CON](screenshots/con_v0.9.png)
+### CONSOLE Tab
+![CONSOLE](screenshots/console_v1.0.png)
 
 Browser-based serial console. Mirrors the complete USB serial output (WiFi events, OTA progress, MQTT, command responses) in real time via WebSocket. Supports the same commands as the USB serial console, with Up/Down arrow history navigation. Command history is persisted in IndexedDB and survives page reloads.
 
