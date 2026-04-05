@@ -96,7 +96,7 @@ jobs:
       - name: Build GitHub Pages
         if: github.ref == 'refs/heads/main'
         run: |
-          mkdir -p docs
+          mkdir -p docs docs/demo
           BUILD=.pio/build/esp32c3_installer
           cp $BUILD/bootloader.bin docs/bootloader.bin
           cp $BUILD/partitions.bin docs/partitions.bin
@@ -123,6 +123,16 @@ jobs:
             ]
           }
           EOF
+          # Demo page — raw src_data + mock WebSocket
+          cp src_data/index.css          docs/demo/index.css
+          cp src_data/index.js           docs/demo/index.js
+          cp src_data/manifest.json      docs/demo/manifest.json
+          cp src_data/*.svg              docs/demo/
+          cp src_data/*.png              docs/demo/
+          cp demo/demo.js                docs/demo/demo.js
+          # Inject demo.js before index.js in the HTML
+          sed 's|<script src="index.js"></script>|<script src="demo.js"></script><script src="index.js"></script>|' \
+            src_data/index.html > docs/demo/index.html
 
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
