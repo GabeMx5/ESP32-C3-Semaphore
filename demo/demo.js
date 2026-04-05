@@ -276,7 +276,9 @@
         case "startGuess":
           cancelEffects();
           push(buildCycleStatus()); push(buildPartyStatus()); push(buildRainbowStatus());
-          setTimeout(() => push({ type: "guessResult", winner: Math.floor(Math.random() * 3) }), 3000);
+          const guessedLed = msg.led ?? 0;
+          const winnerLed  = Math.floor(Math.random() * 3);
+          setTimeout(() => push({ type: "guessResult", win: guessedLed === winnerLed, led: winnerLed }), 3000);
           break;
 
         case "randomYesNo":
