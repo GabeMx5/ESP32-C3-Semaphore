@@ -408,9 +408,16 @@
   banner.id = "demo-banner";
   banner.innerHTML = "⚠ Demo — simulated device, no hardware required";
   Object.assign(banner.style, {
-    position: "fixed", top: "0", left: "0", right: "0", zIndex: "9999",
-    background: "#ffaa00", color: "#000", textAlign: "center",
-    fontSize: "12px", fontWeight: "600", padding: "5px 0",
+    position: "fixed",
+    bottom: "0",
+    left: "0",
+    right: "0",
+    zIndex: "9999",
+    color: "#ffaa00",
+    textAlign: "center",
+    fontSize: "12px",
+    fontWeight: "600",
+    padding: "5px 0",
     letterSpacing: "0.03em",
   });
   document.addEventListener("DOMContentLoaded", () => {
