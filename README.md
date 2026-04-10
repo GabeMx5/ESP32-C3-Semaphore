@@ -26,11 +26,11 @@ The enclosure is available on MakerWorld:
 
 ## Hardware
 
-| Component | Detail |
-|---|---|
-| MCU | ESP32-C3 with built-in SSD1306 OLED 128×64 |
-| LED | 3× WS2812B (NeoPixel) on GPIO 10 |
-| Storage | LittleFS on internal flash |
+| Component | Detail | Link | Details
+|---|---|---|---|
+| MCU | ESP32-C3 with built-in SSD1306 OLED 128×64 | https://it.aliexpress.com/item/1005008354074290.html | 0.42 oled |
+| LED | 3× WS2812B (NeoPixel) on GPIO 10 | https://it.aliexpress.com/item/1005009613294814.html | 5V 1mt 30 led|
+| Storage | LittleFS on internal flash | | |
 
 The three LEDs are arranged vertically: **top = LED 2**, **middle = LED 1**, **bottom = LED 0**.
 
