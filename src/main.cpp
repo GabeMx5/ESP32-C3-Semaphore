@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.1.0"
+#define FIRMWARE_VERSION "1.1.1"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
@@ -1224,6 +1224,7 @@ void setup()
     esp_log_level_set("ssl_client", ESP_LOG_NONE);
     bambuController.begin();
     serialConsole.setBambu(bambuController);
+    serialConsole.setGeo(geoController);
 
     serialConsole.begin();
 

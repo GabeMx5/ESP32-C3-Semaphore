@@ -5,6 +5,7 @@
 #include "wifiConfigManager.h"
 #include "mqttController.h"
 #include "bambulabController.h"
+#include "geoController.h"
 
 class SerialConsole {
 public:
@@ -44,6 +45,7 @@ public:
     }
 
     void setBambu(BambuLabController& b) { _bambu = &b; }
+    void setGeo(GeoController& g)       { _geo   = &g; }
 
     // Execute a command from the web console (echoes it and runs it)
     void executeFromWeb(const String& cmd) {
@@ -58,6 +60,7 @@ private:
     WiFiConfigManager&  _wifi;
     MQTTController&     _mqtt;
     BambuLabController* _bambu = nullptr;
+    GeoController*      _geo   = nullptr;
     const char*         _version;
     String              _buf;
 
@@ -134,6 +137,8 @@ private:
             _print("  bambu serial <value>    — set printer serial number");
             _print("  bambu code <value>      — set access code");
             _print("  bambu enable|disable    — enable/disable BambuLab");
+            _print("  weather                 — show weather and air quality");
+            _print("  weather refresh         — force weather and air quality update");
 
         } else if (cmd == "status") {
             _rawf("Version  : %s", _version);
@@ -363,6 +368,25 @@ private:
                 _print("BambuLab disabled.");
             } else {
                 _rawf("Unknown bambu subcommand: %s", sub.c_str());
+            }
+
+        } else if (cmd == "weather") {
+            if (!_geo) { _print("Weather not available."); return; }
+            if (arg == "refresh") {
+                _print("Refreshing weather and air quality...");
+                _geo->forceRefresh();
+            } else {
+                if (_geo->weather.valid)
+                    _rawf("Weather  : code=%d temp=%.1f°C hum=%.0f%% isDay=%s",
+                          _geo->weather.weatherCode, _geo->weather.temperature,
+                          _geo->weather.humidity, _geo->weather.isDay ? "yes" : "no");
+                else
+                    _print("Weather  : no data");
+                if (_geo->airQuality.valid)
+                    _rawf("Air      : PM2.5=%.1f PM10=%.1f NO2=%.1f",
+                          _geo->airQuality.pm2_5, _geo->airQuality.pm10, _geo->airQuality.no2);
+                else
+                    _print("Air      : no data");
             }
 
         } else if (cmd == "reboot") {

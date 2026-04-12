@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 #include <HTTPClient.h>
-#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <functional>
@@ -63,6 +62,13 @@ public:
         airQuality.valid = false;
     }
 
+    // Resets timers so the next loop() iteration triggers both fetches
+    void forceRefresh()
+    {
+        _lastFetch    = 0;
+        _lastAirFetch = 0;
+    }
+
     void loop()
     {
         if (_lat == 0.0f && _lon == 0.0f) return;
@@ -86,17 +92,16 @@ private:
     void fetch()
     {
         _lastFetch = millis();
-        String url = "https://api.open-meteo.com/v1/forecast"
+        String url = "http://api.open-meteo.com/v1/forecast"
                      "?latitude="  + String(_lat, 6) +
                      "&longitude=" + String(_lon, 6) +
                      "&current=temperature_2m,weather_code,relative_humidity_2m,is_day";
 
-        WiFiClientSecure client;
-        client.setInsecure();
+        Serial.printf("[Geo] heap before fetch: %u\n", ESP.getFreeHeap());
         HTTPClient http;
         http.setTimeout(8000);
 
-        if (!http.begin(client, url))
+        if (!http.begin(url))
         {
             Serial.println("[Geo] http.begin failed");
             return;
@@ -140,17 +145,16 @@ private:
     void fetchAirQuality()
     {
         _lastAirFetch = millis();
-        String url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+        String url = "http://air-quality-api.open-meteo.com/v1/air-quality"
                      "?latitude="  + String(_lat, 6) +
                      "&longitude=" + String(_lon, 6) +
                      "&current=pm10,pm2_5,nitrogen_dioxide";
 
-        WiFiClientSecure client;
-        client.setInsecure();
+        Serial.printf("[AQ] heap before fetch: %u\n", ESP.getFreeHeap());
         HTTPClient http;
         http.setTimeout(8000);
 
-        if (!http.begin(client, url)) { Serial.println("[AQ] http.begin failed"); return; }
+        if (!http.begin(url)) { Serial.println("[AQ] http.begin failed"); return; }
 
         int code = http.GET();
         if (code != 200)
