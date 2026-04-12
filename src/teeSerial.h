@@ -32,18 +32,19 @@ public:
     // is compiled before the "#define Serial teeSerial" that follows the class.
 
     size_t write(uint8_t c) override {
+        if (_lineStart) { _writeTimestamp(); _lineStart = false; }
         size_t r = Serial.write(c);
         _buf += (char)c;
-        if (c == '\n' || _buf.length() >= MAX_LINE) _flush();
+        if (c == '\n' || _buf.length() >= MAX_LINE) {
+            _flush();
+            if (c == '\n') _lineStart = true;
+        }
         return r;
     }
 
     size_t write(const uint8_t* buf, size_t size) override {
-        size_t r = Serial.write(buf, size);
-        for (size_t i = 0; i < size; i++) {
-            _buf += (char)buf[i];
-            if (buf[i] == '\n' || _buf.length() >= MAX_LINE) _flush();
-        }
+        size_t r = 0;
+        for (size_t i = 0; i < size; i++) r += write(buf[i]);
         return r;
     }
 
@@ -60,7 +61,15 @@ private:
     static constexpr size_t MAX_LINE = 512;
     String              _buf;
     bool                _webOutput = true;
+    bool                _lineStart = true;
     std::vector<String> _queue;
+
+    void _writeTimestamp() {
+        char ts[16];
+        snprintf(ts, sizeof(ts), "[%8lu] ", millis());
+        Serial.print(ts);
+        _buf += ts;
+    }
 
     void _flush() {
         String line = _buf;

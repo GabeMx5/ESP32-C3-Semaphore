@@ -265,7 +265,7 @@ private:
     // _stateColors[stateIndex][ledIndex(0-2)][rgb(0-2)]
     uint8_t _stateColors[10][3][3];
 
-    static const unsigned int _maxMessageSize = 20000;
+    static const unsigned int _maxMessageSize = 32768;
     static char               _pendingBuf[_maxMessageSize + 1];
     static unsigned int       _pendingLen;
 
@@ -348,7 +348,6 @@ private:
         memcpy(_pendingBuf, payload, toCopy);
         _pendingBuf[toCopy] = '\0';
         _pendingLen = toCopy;
-        
     }
 
     void _parsePayload()
