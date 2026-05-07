@@ -73,21 +73,43 @@ public:
     {
         if (_lat == 0.0f && _lon == 0.0f) return;
         if (WiFi.status() != WL_CONNECTED) return;
+        if (_taskRunning) return;
         unsigned long now = millis();
         if (_lastFetch == 0 || now - _lastFetch >= GEO_UPDATE_INTERVAL_MS) {
-            Serial.printf("[Geo] Fetching weather (lat=%.6f lon=%.6f lastFetch=%lu)...\n", _lat, _lon, _lastFetch);
-            fetch();
+            _lastFetch = millis();
+            _taskRunning = true;
+            Serial.printf("[Geo] Fetching weather (lat=%.6f lon=%.6f)...\n", _lat, _lon);
+            xTaskCreate(_weatherTaskFn, "geo_w", 8192, this, 1, NULL);
         } else if (_lastAirFetch == 0 || now - _lastAirFetch >= GEO_AQ_INTERVAL_MS) {
-            Serial.printf("[AQ] Fetching air quality (lastAirFetch=%lu)...\n", _lastAirFetch);
-            fetchAirQuality();
+            _lastAirFetch = millis();
+            _taskRunning = true;
+            Serial.printf("[AQ] Fetching air quality...\n");
+            xTaskCreate(_aqTaskFn, "geo_aq", 8192, this, 1, NULL);
         }
     }
 
 private:
-    float         _lat         = 0.0f;
-    float         _lon         = 0.0f;
-    unsigned long _lastFetch   = 0;
+    float         _lat          = 0.0f;
+    float         _lon          = 0.0f;
+    unsigned long _lastFetch    = 0;
     unsigned long _lastAirFetch = 0;
+    volatile bool _taskRunning  = false;
+
+    static void _weatherTaskFn(void* arg)
+    {
+        GeoController* self = static_cast<GeoController*>(arg);
+        self->fetch();
+        self->_taskRunning = false;
+        vTaskDelete(NULL);
+    }
+
+    static void _aqTaskFn(void* arg)
+    {
+        GeoController* self = static_cast<GeoController*>(arg);
+        self->fetchAirQuality();
+        self->_taskRunning = false;
+        vTaskDelete(NULL);
+    }
 
     void fetch()
     {

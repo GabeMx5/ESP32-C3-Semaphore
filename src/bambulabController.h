@@ -102,16 +102,17 @@ public:
     {
         if (!_enabled || _ip.isEmpty())
             return;
-        if (!_client.connected())
+        if (!_client.connected() && !_reconnecting)
         {
             unsigned long now = millis();
             if (now - _lastReconnect >= 10000)
             {
                 _lastReconnect = now;
-                _reconnect();
+                _reconnecting  = true;
+                xTaskCreate(_reconnectTaskFn, "bambu_rc", 10240, this, 1, NULL);
             }
         }
-        else
+        else if (_client.connected())
         {
             _client.loop();
         }
@@ -262,6 +263,15 @@ private:
     bool _idleLedOff = false;
     BambuState _state = BambuState::UNKNOWN;
     unsigned long _lastReconnect = 0;
+    volatile bool _reconnecting  = false;
+
+    static void _reconnectTaskFn(void* arg)
+    {
+        BambuLabController* self = static_cast<BambuLabController*>(arg);
+        self->_reconnect();
+        self->_reconnecting = false;
+        vTaskDelete(NULL);
+    }
     // _stateColors[stateIndex][ledIndex(0-2)][rgb(0-2)]
     uint8_t _stateColors[10][3][3];
 
