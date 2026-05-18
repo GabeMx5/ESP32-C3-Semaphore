@@ -109,6 +109,7 @@ jobs:
           {
             "name": "ESP32-C3 Semaphore",
             "version": "${VERSION#v}",
+            "new_install_improv_wait_time": 30,
             "builds": [
               {
                 "chipFamily": "ESP32-C3",

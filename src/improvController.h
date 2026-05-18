@@ -55,7 +55,7 @@ inline void runImprovSetup(const char* firmwareVersion)
     unsigned long lastAnnounce = millis();
     while (!s_improvProvisioned) {
         improv.handleSerial();
-        if (millis() - lastAnnounce > 2000) {
+        if (millis() - lastAnnounce > 1000) {
             improvAnnounceAuthorized();
             lastAnnounce = millis();
         }

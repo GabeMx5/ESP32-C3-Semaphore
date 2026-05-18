@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.2.1"
+#define FIRMWARE_VERSION "1.2.2"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
@@ -1007,13 +1007,19 @@ void setup()
 {
     Serial.begin(115200);
     delay(200);
+#ifdef IMPROV_ENABLED
+    // Announce Improv state before LittleFS to fit within the browser's 1 s detection window.
+    // ESP Web Tools opens the serial port after flashing (which may trigger a USB reset);
+    // from that moment it waits only ~1 s for an Improv packet. LittleFS.begin() can push
+    // the first announcement past that deadline, so we send it here unconditionally.
+    improvAnnounceAuthorized();
+#endif
     if (!LittleFS.begin(true))
     {
         Serial.println("LittleFS mount failed");
         return;
     }
 #ifdef IMPROV_ENABLED
-    // Improv must run before any other Serial output to avoid confusing ESP Web Tools
     if (!LittleFS.exists("/wifi.json"))
         runImprovSetup(FIRMWARE_VERSION);
 #endif
