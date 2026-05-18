@@ -38,6 +38,12 @@ static bool improvConnectWifi(const char* ssid, const char* pwd) {
 // saves wifi.json and reboots. Never returns on success.
 inline void runImprovSetup(const char* firmwareVersion)
 {
+    // Clear any NVS auto-connect so isConnected() stays false during setup.
+    // Without this the library responds STATE_PROVISIONED to GET_CURRENT_STATE,
+    // then our periodic STATE_AUTHORIZED announcement regresses the state,
+    // confusing ESP Web Tools into opening the WiFi config dialog again.
+    WiFi.mode(WIFI_OFF);
+
     ImprovWiFi improv(&Serial);
     improv.setDeviceInfo(
         ImprovTypes::ChipFamily::CF_ESP32_C3,
