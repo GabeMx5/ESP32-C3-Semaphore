@@ -13,6 +13,10 @@ static String s_improvPwd;
 // Packet: "IMPROV" magic + version(1) + TYPE_CURRENT_STATE(0x01) + length(1) + STATE_AUTHORIZED(0x02) + checksum
 // Checksum = (0x49+0x4D+0x50+0x52+0x4F+0x56+0x01+0x01+0x01+0x02) % 256 = 0xE2
 static void improvAnnounceAuthorized() {
+    // Skip if WiFi is already connected: the library will reply STATE_PROVISIONED
+    // to any GET_CURRENT_STATE query, and sending STATE_AUTHORIZED on top would
+    // regress the state and confuse ESP Web Tools into re-opening the config dialog.
+    if (WiFi.status() == WL_CONNECTED) return;
     static const uint8_t pkt[] = {
         'I','M','P','R','O','V', 0x01, 0x01, 0x01, 0x02, 0xE2
     };
@@ -38,12 +42,6 @@ static bool improvConnectWifi(const char* ssid, const char* pwd) {
 // saves wifi.json and reboots. Never returns on success.
 inline void runImprovSetup(const char* firmwareVersion)
 {
-    // Clear any NVS auto-connect so isConnected() stays false during setup.
-    // Without this the library responds STATE_PROVISIONED to GET_CURRENT_STATE,
-    // then our periodic STATE_AUTHORIZED announcement regresses the state,
-    // confusing ESP Web Tools into opening the WiFi config dialog again.
-    WiFi.mode(WIFI_OFF);
-
     ImprovWiFi improv(&Serial);
     improv.setDeviceInfo(
         ImprovTypes::ChipFamily::CF_ESP32_C3,
