@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.2.6"
+#define FIRMWARE_VERSION "1.2.7"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
@@ -1007,6 +1007,13 @@ void setup()
 {
     Serial.begin(115200);
     delay(200);
+#ifdef IMPROV_ENABLED
+    // Send before LittleFS (~600 ms from USB reset) so ImprovSerial detects
+    // the device within its 1 s window. The guard in improvAnnounceAuthorized()
+    // skips the packet if WiFi is already connected (NVS auto-connect), which
+    // prevents regressing STATE_PROVISIONED to STATE_AUTHORIZED.
+    improvAnnounceAuthorized();
+#endif
     if (!LittleFS.begin(true))
     {
         Serial.println("LittleFS mount failed");
@@ -1014,17 +1021,7 @@ void setup()
     }
 #ifdef IMPROV_ENABLED
     if (!LittleFS.exists("/wifi.json"))
-    {
-        // Send the first Improv STATE_AUTHORIZED packet only when we are actually
-        // about to enter Improv setup. Sending it unconditionally (even when
-        // wifi.json exists) caused ESP Web Tools to repeatedly open the serial
-        // port on already-configured devices, which triggers USB_UART_CHIP_RESET
-        // and a reboot loop that prevents the AP from ever becoming stable.
-        // LittleFS mounts in ~200 ms, so the packet still arrives within the
-        // browser's 1 s ImprovSerial detection window.
-        improvAnnounceAuthorized();
         runImprovSetup(FIRMWARE_VERSION);
-    }
 #endif
 
     monitorController.begin();
