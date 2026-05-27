@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.2.3"
+#define FIRMWARE_VERSION "1.2.4"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;

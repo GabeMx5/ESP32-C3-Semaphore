@@ -24,6 +24,11 @@ public:
     {
         Serial.println("Connecting to WiFi...");
 
+        // Disconnect any previous attempt before starting fresh.
+        // Without this, retried WiFi.begin() calls on top of a stale
+        // connection state can silently fail or take much longer.
+        WiFi.disconnect(true);
+        delay(100);
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(wifiManager->deviceName.c_str());
         esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
@@ -73,6 +78,12 @@ public:
     {
         Serial.println("Starting Access Point mode...");
 
+        // On ESP32-C3, switching from a failed STA state to AP without
+        // first resetting the WiFi peripheral causes softAP() to silently
+        // fail — the AP is never visible to any device.
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
+        delay(100);
         WiFi.mode(WIFI_AP);
 
         // Imposta IP AP fisso
