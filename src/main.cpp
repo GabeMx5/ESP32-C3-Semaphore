@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.2.8"
+#define FIRMWARE_VERSION "1.2.9"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
@@ -304,6 +304,11 @@ void sendSysInfo(AsyncWebSocketClient *client)
     }
     doc["uptime"]         = millis() / 1000;
     doc["bambuConnected"] = bambuController.isConnected();
+    // Surfaced so the page served in AP mode can say why the join failed
+    // instead of leaving the user to guess.
+    doc["wifiFailReason"] = networkManager.getLastFailReason();
+    doc["wifiFailText"]   = networkManager.getLastFailText();
+    doc["apMode"]         = networkManager.isAPMode();
     doc["mqttConnected"]  = mqttController.isConnected();
     String response;
     serializeJson(doc, response);
@@ -1287,6 +1292,7 @@ void setup()
     bambuController.begin();
     serialConsole.setBambu(bambuController);
     serialConsole.setGeo(geoController);
+    serialConsole.setNetwork(networkManager);
 
     serialConsole.begin();
 

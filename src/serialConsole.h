@@ -6,6 +6,7 @@
 #include "mqttController.h"
 #include "bambulabController.h"
 #include "geoController.h"
+#include "networkManager.h"
 
 class SerialConsole {
 public:
@@ -45,6 +46,7 @@ public:
     }
 
     void setBambu(BambuLabController& b) { _bambu = &b; }
+    void setNetwork(NetworkManager& n)   { _net   = &n; }
     void setGeo(GeoController& g)       { _geo   = &g; }
 
     // Execute a command from the web console (echoes it and runs it)
@@ -60,6 +62,7 @@ private:
     WiFiConfigManager&  _wifi;
     MQTTController&     _mqtt;
     BambuLabController* _bambu = nullptr;
+    NetworkManager*     _net   = nullptr;
     GeoController*      _geo   = nullptr;
     const char*         _version;
     String              _buf;
@@ -121,6 +124,8 @@ private:
             _print("  gateway <value>         — set gateway (requires reboot)");
             _print("  dns <value>             — set DNS server (requires reboot)");
             _print("  rssi                    — WiFi signal strength");
+            _print("  wifi                    — WiFi status and last failure reason");
+            _print("  wifi scan               — list the networks in range");
             _print("  heap                    — free heap memory");
             _print("  uptime                  — device uptime");
             _print("  reboot                  — restart device");
@@ -256,6 +261,24 @@ private:
                     _print("DNS saved. Reboot to apply.");
                 }
             }
+
+        } else if (cmd == "wifi") {
+            if (!_net) { _print("Network manager not available."); return; }
+            if (arg == "scan") {
+                _print("Scanning...");
+                _net->logVisibleNetworks();
+                return;
+            }
+            _rawf("Mode      : %s", _net->isAPMode() ? "access point" : "station");
+            _rawf("Connected : %s", _net->isConnected() ? "yes" : "no");
+            _rawf("SSID      : %s", _wifi.wifiSSID.c_str());
+            _rawf("Password  : %u chars", (unsigned)_wifi.wifiPassword.length());
+            if (_net->isConnected()) {
+                _rawf("IP        : %s", WiFi.localIP().toString().c_str());
+                _rawf("Channel   : %d", WiFi.channel());
+                _rawf("RSSI      : %d dBm", WiFi.RSSI());
+            }
+            _rawf("Last error: %u (%s)", _net->getLastFailReason(), _net->getLastFailText());
 
         } else if (cmd == "mqtt") {
             String sub = _cmd(arg);

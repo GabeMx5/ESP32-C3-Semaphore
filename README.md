@@ -246,6 +246,56 @@ Includes:
 
 ---
 
+## Troubleshooting WiFi
+
+If the device never joins and falls back to the access point, the serial log now
+says why. Every station event is printed with its reason code, and before giving
+up the device scans and lists what it can actually hear:
+
+```
+[WiFi] SSID 'MyNetwork' (9 chars), password 12 chars, hostname 'semaphore', dhcp yes
+[WiFi] disconnected, reason 202: auth failed - wrong password
+[WiFi]   OtherNetwork             ch 6   -54 dBm  WPA2
+[WiFi] > MyNetwork                ch 13  -61 dBm  WPA2/WPA3
+```
+
+The same information is available at runtime: `wifi` on the console prints the
+status and the last failure reason, `wifi scan` lists the networks in range, and
+the INFO tab shows a **WiFi error** row whenever a join has failed — which is
+what the page served in access point mode is for.
+
+Common reasons:
+
+| Reason | Meaning |
+|---|---|
+| 201 | AP not found — wrong SSID, out of range |
+| 202, 15, 17 | Wrong password |
+| 203, 204 | Association or handshake failed — often WPA3 or PMF |
+| 200 | Beacon timeout — signal too weak |
+
+Three fixes went in for causes that used to be invisible:
+
+- **Channels 12 and 13.** The default regulatory setting only scans them
+  passively, so an AP on 12 or 13 never showed up in the active scan that
+  `WiFi.begin()` performs — the device reported "AP not found" for a network
+  every other device in the house could see. The country is now configured for
+  channels 1–13 with AUTO policy, which still adopts the AP's own regulatory
+  domain from its beacons once associated.
+- **Modem sleep is off.** On the ESP32-C3 it is a common cause of missed
+  beacons and dropped associations.
+- **A scan-assisted last attempt.** After the three normal retries the device
+  scans, picks the strongest BSSID for the configured SSID and joins it by
+  explicit channel and BSSID. That also covers hidden SSIDs and networks with
+  several APs sharing one name.
+
+Retries now also wait progressively longer (10, 15, 20 s) for routers with band
+steering or a slow DHCP server, and access point mode no longer reboots after
+three minutes: the ten-minute timeout is suspended for as long as a client is
+connected to it, so the device cannot restart while somebody is typing their
+password into the setup page.
+
+---
+
 ## MQTT / Home Assistant
 
 The device automatically publishes discovery topics for Home Assistant:
