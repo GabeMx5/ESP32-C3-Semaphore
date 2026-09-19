@@ -507,6 +507,17 @@ function updateMqttStatusLabel(mqttBroker, mqttConnected) {
 let lastSysInfo = null;
 
 function onSysInfo(data) {
+  // Only meaningful after a failed join; hidden while the station is happy.
+  if (data.wifiFailText !== undefined) {
+    const row = document.getElementById("wifiErrorRow");
+    const show = data.wifiFailReason > 0;
+    row.style.display = show ? "flex" : "none";
+    if (show) {
+      document.getElementById("infoWifiError").textContent =
+        `${data.wifiFailReason}: ${data.wifiFailText}`;
+      document.getElementById("infoWifiError").style.color = "#c0392b";
+    }
+  }
   lastSysInfo = Object.assign({}, lastSysInfo || {}, data);
   data = lastSysInfo;
   document.getElementById("infoVersion").textContent = data.version  ? `v${data.version}` : "—";
