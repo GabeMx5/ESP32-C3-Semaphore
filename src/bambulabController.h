@@ -109,10 +109,23 @@ public:
             {
                 _lastReconnect = now;
                 _reconnecting  = true;
-                xTaskCreate(_reconnectTaskFn, "bambu_rc", 10240, this, 1, NULL);
+                // The flag has to be cleared here when the task cannot be
+                // created: it is only reset from inside the task, so a failed
+                // creation (heap too fragmented for the 10 KB stack) would
+                // leave _reconnecting stuck at true and the controller would
+                // never attempt to reconnect again.
+                if (xTaskCreate(_reconnectTaskFn, "bambu_rc", 10240, this, 1, NULL) != pdPASS)
+                {
+                    _reconnecting = false;
+                    Serial.println("[BambuLab] reconnect task creation failed (low heap)");
+                }
             }
         }
-        else if (_client.connected())
+        // Never touch the client while the reconnect task owns it: PubSubClient
+        // uses a single buffer for both directions and the mbedTLS context is
+        // not thread-safe, so calling loop() here while the task is still
+        // inside connect()/subscribe() corrupts both.
+        else if (_client.connected() && !_reconnecting)
         {
             _client.loop();
         }
@@ -148,6 +161,9 @@ public:
     {
         return (_idleSince > 0) ? (long)((millis() - _idleSince) / 1000) : -1L;
     }
+
+    // True once the idle timeout has blanked the LEDs.
+    bool isIdleLedOff() const { return _idleLedOff; }
 
     void applyConfig(const String &ip, const String &serial,
                      const String &accessCode, bool enabled)
@@ -277,7 +293,7 @@ private:
 
     static const unsigned int _maxMessageSize = 32768;
     static char               _pendingBuf[_maxMessageSize + 1];
-    static unsigned int       _pendingLen;
+    static volatile unsigned int _pendingLen;
 
     static int _stateToIndex(BambuState s)
     {
@@ -352,8 +368,6 @@ private:
     {
         if (!_instance || !payload || len == 0)
             return;
-        long start = millis();
-        
         unsigned int toCopy = len < _maxMessageSize ? len : _maxMessageSize;
         memcpy(_pendingBuf, payload, toCopy);
         _pendingBuf[toCopy] = '\0';
@@ -402,6 +416,11 @@ private:
 
     bool _reconnect()
     {
+        // Release the previous TLS session before opening a new one: the
+        // mbedTLS context of a dropped connection is otherwise never freed and
+        // the heap shrinks a little on every reconnect.
+        _wifiClient.stop();
+
         String clientId = "semaphore_bambu_" + String(millis() % 100000);
         bool ok = _client.connect(clientId.c_str(), "bblp", _accessCode.c_str());
         if (ok)
@@ -424,4 +443,4 @@ private:
 
 BambuLabController *BambuLabController::_instance  = nullptr;
 char               BambuLabController::_pendingBuf[BambuLabController::_maxMessageSize + 1];
-unsigned int       BambuLabController::_pendingLen = 0;
+volatile unsigned int BambuLabController::_pendingLen = 0;

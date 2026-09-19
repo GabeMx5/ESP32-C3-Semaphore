@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.2.7"
+#define FIRMWARE_VERSION "1.2.8"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
@@ -8,6 +8,7 @@ TeeSerial teeSerial;
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <esp_ota_ops.h>
+#include <esp_task_wdt.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
 #include <ArduinoJson.h>
@@ -215,9 +216,17 @@ void sendBambuConfig(AsyncWebSocketClient *client)
     client->text(response);
 }
 
+// BambuLab printer mode drives the LEDs through LEDController's overlay, which
+// has a finite lifetime. Arming it for "practically forever" (the old 24 h
+// value) meant the LEDs silently fell back to the saved configuration when the
+// printer stayed in one state for a day. Instead it is armed for a short hold
+// time and re-armed from loop() every refresh interval, so the LEDs also
+// recover on their own if the refresh ever stops.
+static const unsigned long BAMBU_OVERLAY_HOLD_MS    = 120000;  // 2 minutes
+static const unsigned long BAMBU_OVERLAY_REFRESH_MS = 30000;   // 30 seconds
+
 static void applyBambuLedState(BambuState s)
 {
-    static constexpr unsigned long LONG_MS = 3600000UL * 24;
     uint8_t r0, g0, b0, r1, g1, b1, r2, g2, b2;
     bambuController.getStateColor(s, 0, r0, g0, b0);
     bambuController.getStateColor(s, 1, r1, g1, b1);
@@ -225,7 +234,21 @@ static void applyBambuLedState(BambuState s)
     if (!r0 && !g0 && !b0 && !r1 && !g1 && !b1 && !r2 && !g2 && !b2)
         ledController.cancelOverlay();
     else
-        ledController.showOverlay(r0, g0, b0, r1, g1, b1, r2, g2, b2, LONG_MS);
+        ledController.showOverlay(r0, g0, b0, r1, g1, b1, r2, g2, b2, BAMBU_OVERLAY_HOLD_MS);
+}
+
+// True when the given printer state lights at least one LED. States that map to
+// "all off" release the overlay instead of holding it, so there is nothing to
+// re-arm for them and re-applying would restart the restore every refresh.
+static bool bambuStateHasColor(BambuState s)
+{
+    uint8_t r, g, b;
+    for (int led = 0; led < 3; led++)
+    {
+        bambuController.getStateColor(s, led, r, g, b);
+        if (r || g || b) return true;
+    }
+    return false;
 }
 
 // Disables BambuLab printer mode and notifies all WS clients.
@@ -348,6 +371,12 @@ static void _sendToBambuAndInfoViewers(const String& msg)
         AsyncWebSocketClient* c = ws.client(id);
         if (c) c->text(msg);
     }
+}
+
+// True when at least one client is on a tab that consumes these updates.
+static bool _hasBambuOrInfoViewers()
+{
+    return !_bambuViewerIds.empty() || !_infoViewerIds.empty();
 }
 
 void weatherTempToRgb(float temp, uint8_t& outR, uint8_t& outG, uint8_t& outB)
@@ -1001,6 +1030,33 @@ void setupWebServer()
     monitorController.displayMessage("IP:\n" + WiFi.localIP().toString());
 }
 
+// ─── Watchdog ─────────────────────────────────────────────────────────────────
+
+#define WDT_TIMEOUT_S 60
+
+// Arms the task watchdog on the Arduino loop task. If loop() ever stops feeding
+// it — deadlock, corrupted state, a network call that never returns — the device
+// panics and reboots instead of sitting there unresponsive until someone power
+// cycles it. 60 s leaves room for the longest blocking call in loop()
+// (PubSubClient's 15 s socket timeout).
+static void setupWatchdog()
+{
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    esp_task_wdt_config_t cfg = {};
+    cfg.timeout_ms     = WDT_TIMEOUT_S * 1000;
+    cfg.idle_core_mask = 0;
+    cfg.trigger_panic  = true;
+    // Arduino 3.x already initialises the TWDT at boot, so reconfigure it
+    // instead of initialising a second time.
+    if (esp_task_wdt_init(&cfg) == ESP_ERR_INVALID_STATE)
+        esp_task_wdt_reconfigure(&cfg);
+#else
+    esp_task_wdt_init(WDT_TIMEOUT_S, true);
+#endif
+    esp_task_wdt_add(NULL);
+    Serial.printf("[WDT] Task watchdog armed (%d s)\n", WDT_TIMEOUT_S);
+}
+
 // ─── Setup / Loop ─────────────────────────────────────────────────────────────
 
 void setup()
@@ -1222,7 +1278,7 @@ void setup()
         }
     };
     bambuController.onIdleTimeout = []() {
-        ledController.showColor(0, 0, 0, 3600000UL * 24);
+        ledController.showColor(0, 0, 0, BAMBU_OVERLAY_HOLD_MS);
     };
     // Suppress low-level TLS error spam from the ESP32 core.
     // BambuLab occasionally sends large records; errors are handled by
@@ -1263,10 +1319,13 @@ void setup()
         serializeJson(doc, msg);
         ws.textAll(msg);
     };
+
+    setupWatchdog();
 }
 
 void loop()
 {
+    esp_task_wdt_reset();
     ArduinoOTA.handle();
     alexaController.loop();
     networkManager.handleFallbackLogic();
@@ -1298,17 +1357,23 @@ void loop()
         bool nowConnected = bambuController.isConnected();
         if (nowConnected != _lastBambuConnected) {
             _lastBambuConnected = nowConnected;
-            JsonDocument doc;
-            doc["type"]      = "bambuConfig";
-            doc["connected"] = nowConnected;
-            if (!nowConnected) doc["state"] = "offline";
-            String msg; serializeJson(doc, msg);
-            _sendToBambuAndInfoViewers(msg);
+            // Track the transition either way, but only build the message when
+            // somebody is listening.
+            if (_hasBambuOrInfoViewers()) {
+                JsonDocument doc;
+                doc["type"]      = "bambuConfig";
+                doc["connected"] = nowConnected;
+                if (!nowConnected) doc["state"] = "offline";
+                String msg; serializeJson(doc, msg);
+                _sendToBambuAndInfoViewers(msg);
+            }
         }
     }
     {
+        // Without the viewer check this allocated a JsonDocument and a String
+        // every single second for nobody, fragmenting the heap over days.
         static unsigned long _lastIdlePush = 0;
-        if (millis() - _lastIdlePush >= 1000) {
+        if (_hasBambuOrInfoViewers() && millis() - _lastIdlePush >= 1000) {
             _lastIdlePush = millis();
             int32_t idleSec = bambuController.getIdleSec();
             if (idleSec >= 0) {
@@ -1318,6 +1383,20 @@ void loop()
                 String msg; serializeJson(doc, msg);
                 _sendToBambuAndInfoViewers(msg);
             }
+        }
+    }
+    // Re-arm the BambuLab LED overlay: applyBambuLedState() only runs on a
+    // state change, so a printer sitting in one state longer than the overlay
+    // hold time would otherwise lose its colours.
+    {
+        static unsigned long _lastBambuOverlay = 0;
+        if (bambuController.getBambuMode() && bambuController.isConnected() &&
+            millis() - _lastBambuOverlay >= BAMBU_OVERLAY_REFRESH_MS) {
+            _lastBambuOverlay = millis();
+            if (bambuController.isIdleLedOff())
+                ledController.showColor(0, 0, 0, BAMBU_OVERLAY_HOLD_MS);
+            else if (bambuStateHasColor(bambuController.getState()))
+                applyBambuLedState(bambuController.getState());
         }
     }
     mqttController.loop();
