@@ -6,8 +6,13 @@
 #include <Preferences.h>
 #include <functional>
 
+#ifdef HALLOWEEN_MODE
+#define OTA_FW_URL  "https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/download/halloween-dev-latest/firmware.bin"
+#define OTA_FS_URL  "https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/download/halloween-dev-latest/filesystem.bin"
+#else
 #define OTA_FW_URL  "https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/latest/download/firmware.bin"
 #define OTA_FS_URL  "https://github.com/GabeMx5/ESP32-C3-Semaphore/releases/latest/download/filesystem.bin"
+#endif
 
 static const char* OTA_KEYS[]  = { "config", "wifi", "mqtt", "timers", "bambu" };
 static const char* OTA_PATHS[] = { "/config.json", "/wifi.json", "/mqtt.json", "/timers.json", "/bambu.json" };

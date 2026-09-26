@@ -1306,23 +1306,15 @@ if (localStorage.getItem("activeTab") === "timer") renderTimers();
 // ─── OTA Update ───────────────────────────────────────────────────────────────
 
 const OTA_STEP_ORDER = ["backup", "filesystem", "restore", "firmware"];
-const GITHUB_RELEASES_URL = "https://api.github.com/repos/GabeMx5/ESP32-C3-Semaphore/releases/latest";
+// Fetch manifest.json from the deployed Halloween installer page — avoids GitHub API
+// rate limits and works correctly with halloween version strings (e.g. 1.2.9-halloween.1).
+const HALLOWEEN_MANIFEST_URL = "https://gabemx5.github.io/ESP32-C3-Semaphore/halloween/manifest.json";
 
 let _deviceVersion = null;
 let _latestVersion = null;
 
 const SVG_REFRESH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
 const SVG_UPLOAD  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`;
-
-function _isNewer(latest, current) {
-  const l = latest.replace(/^v/, '').split('.').map(Number);
-  const c = (current || '0').split('.').map(Number);
-  for (let i = 0; i < Math.max(l.length, c.length); i++) {
-    if ((l[i] || 0) > (c[i] || 0)) return true;
-    if ((l[i] || 0) < (c[i] || 0)) return false;
-  }
-  return false;
-}
 
 function _setUpdateBtn(state) {
   const btn  = document.getElementById("updateBtn");
@@ -1339,15 +1331,15 @@ function _setUpdateBtn(state) {
 function checkFirmwareUpdate(notify = false, autoShow = false) {
   if (!_deviceVersion) return;
   _setUpdateBtn("checking");
-  fetch(GITHUB_RELEASES_URL)
+  fetch(HALLOWEEN_MANIFEST_URL + "?t=" + Date.now())
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(data => {
-      _latestVersion = data.tag_name || null;
-      if (_latestVersion && _isNewer(_latestVersion, _deviceVersion)) {
+      _latestVersion = data.version || null;
+      if (_latestVersion && _latestVersion !== _deviceVersion) {
         _setUpdateBtn("available");
         if (autoShow) {
           document.getElementById("ota-latest-label").textContent =
-            `Current: v${_deviceVersion}  →  Latest: ${_latestVersion}`;
+            `Current: v${_deviceVersion}  →  Latest: v${_latestVersion}`;
           document.getElementById("ota-phase-confirm").style.display  = "";
           document.getElementById("ota-phase-progress").style.display = "none";
           document.getElementById("ota-overlay").classList.add("visible");
@@ -1367,7 +1359,7 @@ function onUpdateBtnClick() {
   const btn = document.getElementById("updateBtn");
   if (btn && btn.classList.contains("update-available")) {
     document.getElementById("ota-latest-label").textContent =
-      `Current: v${_deviceVersion}  →  Latest: ${_latestVersion}`;
+      `Current: v${_deviceVersion}  →  Latest: v${_latestVersion}`;
     document.getElementById("ota-phase-confirm").style.display  = "";
     document.getElementById("ota-phase-progress").style.display = "none";
     document.getElementById("ota-overlay").classList.add("visible");
