@@ -1,6 +1,6 @@
 {
   "name": "ESP32-C3 Semaphore — Halloween Edition",
-  "version": "1.2.9-halloween.1",
+  "version": "1.2.9-halloween.2",
   "new_install_improv_wait_time": 30,
   "builds": [
     {
