@@ -1,0 +1,133 @@
+name: Halloween Build and Release
+
+on:
+  push:
+    branches: [halloween-edition]
+    tags: ['halloween-v*']
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-halloween-${{ hashFiles('platformio.ini') }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware (Halloween installer variant)
+        run: pio run -e esp32c3_halloween
+
+      - name: Compress Halloween web assets
+        run: python3 -c "import compress_web_standalone; compress_web_standalone.compress('src_data_halloween', 'data')"
+
+      - name: Build filesystem
+        run: pio run -t buildfs -e esp32c3_halloween
+
+      - name: Prepare artifacts (dev)
+        if: github.ref == 'refs/heads/halloween-edition'
+        run: |
+          BUILD=.pio/build/esp32c3_halloween
+          cp $BUILD/firmware.bin   $BUILD/firmware-halloween-dev.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem-halloween-dev.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin $BUILD/boot_app0.bin
+
+      - name: Prepare artifacts (release)
+        if: startsWith(github.ref, 'refs/tags/halloween-v')
+        run: |
+          BUILD=.pio/build/esp32c3_halloween
+          cp $BUILD/firmware.bin   $BUILD/firmware-${{ github.ref_name }}.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem-${{ github.ref_name }}.bin
+          cp $BUILD/littlefs.bin   $BUILD/filesystem.bin
+          cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin $BUILD/boot_app0.bin
+
+      - name: Dev release (halloween-edition push)
+        if: github.ref == 'refs/heads/halloween-edition'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: halloween-dev-latest
+          name: Halloween Edition — Dev build
+          prerelease: true
+          make_latest: false
+          files: |
+            .pio/build/esp32c3_halloween/firmware-halloween-dev.bin
+            .pio/build/esp32c3_halloween/filesystem-halloween-dev.bin
+            .pio/build/esp32c3_halloween/firmware.bin
+            .pio/build/esp32c3_halloween/filesystem.bin
+            .pio/build/esp32c3_halloween/bootloader.bin
+            .pio/build/esp32c3_halloween/partitions.bin
+            .pio/build/esp32c3_halloween/boot_app0.bin
+
+      - name: Stable release (tag push)
+        if: startsWith(github.ref, 'refs/tags/halloween-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          make_latest: false
+          files: |
+            .pio/build/esp32c3_halloween/firmware-${{ github.ref_name }}.bin
+            .pio/build/esp32c3_halloween/filesystem-${{ github.ref_name }}.bin
+            .pio/build/esp32c3_halloween/firmware.bin
+            .pio/build/esp32c3_halloween/filesystem.bin
+            .pio/build/esp32c3_halloween/bootloader.bin
+            .pio/build/esp32c3_halloween/partitions.bin
+            .pio/build/esp32c3_halloween/boot_app0.bin
+
+      - name: Build Halloween installer page
+        if: github.ref == 'refs/heads/halloween-edition'
+        run: |
+          mkdir -p halloween_docs
+          BUILD=.pio/build/esp32c3_halloween
+          cp $BUILD/bootloader.bin halloween_docs/bootloader.bin
+          cp $BUILD/partitions.bin halloween_docs/partitions.bin
+          cp $BUILD/boot_app0.bin  halloween_docs/boot_app0.bin
+          cp $BUILD/firmware.bin   halloween_docs/firmware.bin
+          cp $BUILD/filesystem.bin halloween_docs/filesystem.bin
+          cp installer/index.html  halloween_docs/index.html
+          VERSION=$(grep -oP '(?<=#define FIRMWARE_VERSION ")[^"]+' src/main.cpp)
+          cat > halloween_docs/manifest.json << EOF
+          {
+            "name": "ESP32-C3 Semaphore — Halloween Edition",
+            "version": "${VERSION#v}",
+            "new_install_improv_wait_time": 30,
+            "builds": [
+              {
+                "chipFamily": "ESP32-C3",
+                "parts": [
+                  { "path": "bootloader.bin", "offset": 0 },
+                  { "path": "partitions.bin",  "offset": 32768 },
+                  { "path": "boot_app0.bin",   "offset": 57344 },
+                  { "path": "firmware.bin",    "offset": 65536 },
+                  { "path": "filesystem.bin",  "offset": 3866624 }
+                ]
+              }
+            ]
+          }
+          EOF
+
+      - name: Deploy Halloween installer to /halloween/ on GitHub Pages
+        if: github.ref == 'refs/heads/halloween-edition'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./halloween_docs
+          destination_dir: halloween
+          keep_files: true
