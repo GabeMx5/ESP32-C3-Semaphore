@@ -2,7 +2,7 @@
 
 <p align="center"><img src="screenshots/Semaphore_halloween.gif" width="240" alt="Halloween Edition"/></p>
 
-Three smart RGB pumpkins light based on the **Seeed XIAO ESP32-C3**, controllable via browser with a PWA web interface, MQTT/Home Assistant integration, and scheduled timers.
+Three smart RGB pumpkin lights based on the **Seeed XIAO ESP32-C3**, controllable via browser with a PWA web interface, MQTT/Home Assistant integration, and scheduled timers.
 
 ---
 
