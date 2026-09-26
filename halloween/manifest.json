@@ -1,0 +1,17 @@
+{
+  "name": "ESP32-C3 Semaphore — Halloween Edition",
+  "version": "1.2.9",
+  "new_install_improv_wait_time": 30,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "parts": [
+        { "path": "bootloader.bin", "offset": 0 },
+        { "path": "partitions.bin",  "offset": 32768 },
+        { "path": "boot_app0.bin",   "offset": 57344 },
+        { "path": "firmware.bin",    "offset": 65536 },
+        { "path": "filesystem.bin",  "offset": 3866624 }
+      ]
+    }
+  ]
+}
