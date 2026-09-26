@@ -156,11 +156,19 @@ setInterval(() => {
     if (!led.blink) return;
     const ledCircle = document.querySelector(`#svgContainer svg #led${index}`);
     if (!ledCircle) return;
-    ledCircle.style.fill = (led.on && blinkPhase) ? `rgb(${led.r},${led.g},${led.b})` : "#444";
+    setLedFill(ledCircle, (led.on && blinkPhase) ? `rgb(${led.r},${led.g},${led.b})` : "#444");
   });
 }, BLINK_INTERVAL_MS);
 
 // ─── LED ──────────────────────────────────────────────────────────────────────
+
+// The SVG wraps each LED in a <g id="ledN"> whose child <path> elements carry
+// a .st0 CSS class that defines fill. Setting fill on the <g> only sets an
+// inherited value, which the class rule on each <path> overrides. To actually
+// change the colour we must set fill directly on every child path.
+function setLedFill(groupEl, color) {
+  groupEl.querySelectorAll("path").forEach(p => p.style.fill = color);
+}
 
 let lastLedStatus = null;
 
@@ -184,9 +192,9 @@ function onLedStatus(leds) {
       colorPicker.value = `#${toHex(led.r)}${toHex(led.g)}${toHex(led.b)}`;
     }
     if (ledCircle && !isBlink) {
-      ledCircle.style.fill = isOn ? `rgb(${led.r},${led.g},${led.b})` : "#444";
+      setLedFill(ledCircle, isOn ? `rgb(${led.r},${led.g},${led.b})` : "#444");
     } else if (ledCircle && !isOn) {
-      ledCircle.style.fill = "#444";
+      setLedFill(ledCircle, "#444");
     }
   });
 }
@@ -201,7 +209,7 @@ function prepareLedCards() {
     const blinkBtn    = card.querySelector(".blink");
     const ledCircle   = document.querySelector(`#svgContainer svg #led${ledIndex}`);
 
-    ledCircle.style.fill = "#444";
+    setLedFill(ledCircle, "#444");
 
     // Click sul cerchio → apre color picker
     ledCircle.addEventListener("click", () => {
@@ -211,8 +219,8 @@ function prepareLedCards() {
     function sendLed(r, g, b, on, blink) {
       Object.assign(ledStatus[ledIndex], { r, g, b, on, blink });
       wsSend({ type: "setLed", led: ledIndex, r, g, b, on, blink });
-      if (!on) ledCircle.style.fill = "#444";
-      else if (!blink) ledCircle.style.fill = `rgb(${r},${g},${b})`;
+      if (!on) setLedFill(ledCircle, "#444");
+      else if (!blink) setLedFill(ledCircle, `rgb(${r},${g},${b})`);
     }
 
     function currentRGB() {
