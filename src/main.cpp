@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION "1.2.9"
+#define FIRMWARE_VERSION "1.2.9-halloween"
 
 #include "teeSerial.h"
 TeeSerial teeSerial;
