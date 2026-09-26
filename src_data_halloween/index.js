@@ -497,7 +497,7 @@ function updateMqttStatusLabel(mqttBroker, mqttConnected) {
   if (!statusEl) return;
   if (mqttBroker) {
     statusEl.textContent = mqttConnected ? "Connected" : "Disconnected";
-    statusEl.style.color = mqttConnected ? "#b1ff42" : "#f44336";
+    statusEl.style.color = mqttConnected ? "#FF7518" : "#f44336";
   } else {
     statusEl.textContent = "Not configured";
     statusEl.style.color = "#aaa";
@@ -541,7 +541,7 @@ function onSysInfo(data) {
   const mqttEl = document.getElementById("infoMqtt");
   if (data.mqttBroker) {
     mqttEl.textContent = data.mqttConnected ? `Connected (${data.mqttBroker})` : `Disconnected (${data.mqttBroker})`;
-    mqttEl.style.color = data.mqttConnected ? "#b1ff42" : "#f44336";
+    mqttEl.style.color = data.mqttConnected ? "#FF7518" : "#f44336";
   } else {
     mqttEl.textContent = "Not configured";
     mqttEl.style.color = "#aaa";

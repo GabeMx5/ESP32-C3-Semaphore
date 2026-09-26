@@ -66,7 +66,7 @@
 }
 
 .ota-step.done {
-  color: #b1ff42;
+  color: #FF7518;
 }
 
 .ota-step.done::before {
@@ -319,7 +319,7 @@
   --card:           #161b22;
   --surface:        #21262d;
   --border:         #30363d;
-  --primary:        #b1ff42;
+  --primary:        #FF7518;
   --primary-hover:  #9de030;
   --text:           #e6edf3;
   --secondary-text: #7d8590;
