@@ -10,7 +10,12 @@ A smart RGB traffic light based on the **Seeed XIAO ESP32-C3**, controllable via
 
 Flash the firmware directly from the browser (Chrome / Edge) — no tools required:
 
-**[https://gabemx5.github.io/ESP32-C3-Semaphore/](https://gabemx5.github.io/ESP32-C3-Semaphore/)**
+| Edition | Installer |
+|---|---|
+| **Standard** | **[gabemx5.github.io/ESP32-C3-Semaphore/](https://gabemx5.github.io/ESP32-C3-Semaphore/)** |
+| **Halloween** 🎃 | **[gabemx5.github.io/ESP32-C3-Semaphore/halloween/](https://gabemx5.github.io/ESP32-C3-Semaphore/halloween/)** |
+
+<p align="center"><img src="screenshots/Semaphore_halloween.gif" width="240" alt="Halloween Edition"/></p>
 
 After flashing, the device enters an **Improv Wi-Fi Serial** setup wizard. Enter your Wi-Fi credentials from the browser within **1 minute**. If the timeout expires, the device automatically switches to **Access Point mode** (`192.168.4.1`) so you can configure it from the web UI without USB.
 
